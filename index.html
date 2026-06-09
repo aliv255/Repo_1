@@ -1,0 +1,1584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Final Fantasy Chess</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --light-sq: #f0d9b5;
+    --dark-sq: #b58863;
+    --board-size: min(560px, 90vw);
+    --sq: calc(var(--board-size) / 8);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: radial-gradient(ellipse at center, #1a3a1a 0%, #0d1f0d 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: 'Cinzel', serif;
+    overflow-x: hidden;
+  }
+
+  h1 {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: clamp(1.2rem, 4vw, 2.2rem);
+    color: #f5d87a;
+    text-shadow: 0 0 20px #f5d87a88, 2px 2px 4px #000;
+    margin: 18px 0 6px;
+    letter-spacing: 3px;
+  }
+
+  .subtitle {
+    color: #aad4aa;
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    margin-bottom: 14px;
+    opacity: 0.8;
+  }
+
+  /* Theme switcher */
+  .theme-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .theme-btn {
+    font-family: 'Cinzel', serif;
+    font-size: 0.75rem;
+    padding: 7px 18px;
+    border: 2px solid #f5d87a55;
+    background: rgba(0,0,0,0.4);
+    color: #ccc;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s;
+    letter-spacing: 1px;
+  }
+  .theme-btn:hover { border-color: #f5d87a; color: #f5d87a; }
+  .theme-btn.active { background: #f5d87a22; border-color: #f5d87a; color: #f5d87a; box-shadow: 0 0 12px #f5d87a44; }
+
+  /* Status bar */
+  .status-bar {
+    font-size: clamp(0.75rem, 2.5vw, 0.95rem);
+    color: #f5d87a;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid #f5d87a44;
+    border-radius: 8px;
+    padding: 8px 24px;
+    margin-bottom: 12px;
+    letter-spacing: 1px;
+    text-align: center;
+    min-width: 280px;
+    text-shadow: 0 0 8px #f5d87a66;
+  }
+  .status-bar.check { color: #ff8844; border-color: #ff884466; text-shadow: 0 0 10px #ff884488; }
+  .status-bar.checkmate { color: #ff4444; border-color: #ff444466; font-size: 1.1rem; }
+
+  /* Outer nature border */
+  .nature-frame {
+    position: relative;
+    padding: 28px;
+    background: radial-gradient(ellipse at center, #2d5a1e 0%, #1a3a10 100%);
+    border-radius: 16px;
+    box-shadow: 0 0 40px #00000099, inset 0 0 20px #00000044;
+  }
+
+  /* Trees SVG strips */
+  .trees-top, .trees-bottom, .trees-left, .trees-right {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+  }
+  .trees-top    { top: 2px; left: 28px; right: 28px; height: 26px; flex-direction: row; }
+  .trees-bottom { bottom: 2px; left: 28px; right: 28px; height: 26px; flex-direction: row; }
+  .trees-left   { left: 2px; top: 28px; bottom: 28px; width: 26px; flex-direction: column; }
+  .trees-right  { right: 2px; top: 28px; bottom: 28px; width: 26px; flex-direction: column; }
+
+  /* Board wrapper with coordinates */
+  .board-wrap {
+    position: relative;
+    width: var(--board-size);
+    height: var(--board-size);
+  }
+
+  .coords-file {
+    position: absolute;
+    bottom: -18px;
+    left: 0;
+    width: 100%;
+    display: flex;
+  }
+  .coords-rank {
+    position: absolute;
+    left: -18px;
+    top: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  .coord {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    color: #aad4aa88;
+    font-family: 'Cinzel', serif;
+  }
+
+  /* Chess board */
+  #board {
+    width: var(--board-size);
+    height: var(--board-size);
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    border: 3px solid #7a5230;
+    box-shadow: 0 0 20px #00000088;
+  }
+
+  .sq {
+    position: relative;
+    width: var(--sq);
+    height: var(--sq);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: filter 0.15s;
+  }
+  .sq.light { background: var(--light-sq); }
+  .sq.dark  { background: var(--dark-sq); }
+  .sq:hover { filter: brightness(1.12); }
+  .sq.selected { outline: 3px solid #ffe000; outline-offset: -3px; filter: brightness(1.2); }
+  .sq.valid-move::after {
+    content: '';
+    position: absolute;
+    width: 30%;
+    height: 30%;
+    background: rgba(0,0,0,0.25);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .sq.valid-capture::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 4px solid rgba(0,0,0,0.3);
+    border-radius: 2px;
+    pointer-events: none;
+  }
+  .sq.last-move { background: rgba(255,255,0,0.3) !important; }
+  .sq.in-check { background: rgba(255,60,60,0.5) !important; }
+
+  /* Piece SVGs */
+  .piece {
+    width: 88%;
+    height: 88%;
+    user-select: none;
+    pointer-events: none;
+    transition: transform 0.15s;
+    filter: drop-shadow(1px 2px 3px rgba(0,0,0,0.5));
+  }
+  .sq.selected .piece { transform: scale(1.1); }
+
+  /* Capture animation */
+  @keyframes captureFlash {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.3; transform: scale(1.3); }
+    100% { opacity: 0; transform: scale(0); }
+  }
+  .piece.capturing { animation: captureFlash 0.3s forwards; }
+
+  /* Promotion modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: #1a2e1a;
+    border: 2px solid #f5d87a;
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+    color: #f5d87a;
+    font-family: 'Cinzel', serif;
+  }
+  .modal h2 { margin-bottom: 16px; font-size: 1.1rem; }
+  .promo-pieces { display: flex; gap: 12px; justify-content: center; }
+  .promo-piece {
+    width: 64px; height: 64px;
+    background: rgba(255,255,255,0.05);
+    border: 2px solid #f5d87a44;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .promo-piece:hover { border-color: #f5d87a; background: rgba(255,255,255,0.1); }
+  .promo-piece svg { width: 50px; height: 50px; }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .ctrl-btn {
+    font-family: 'Cinzel', serif;
+    font-size: 0.8rem;
+    padding: 8px 20px;
+    background: rgba(0,0,0,0.5);
+    border: 2px solid #f5d87a55;
+    color: #f5d87a;
+    border-radius: 6px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+  .ctrl-btn:hover { background: #f5d87a22; border-color: #f5d87a; }
+
+  .move-log {
+    margin-top: 12px;
+    font-size: 0.65rem;
+    color: #aad4aa88;
+    letter-spacing: 1px;
+    max-width: var(--board-size);
+    text-align: center;
+    min-height: 18px;
+  }
+
+  /* Legend */
+  .legend {
+    margin-top: 16px;
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .legend-side {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid #f5d87a22;
+    border-radius: 8px;
+    padding: 10px 16px;
+    min-width: 160px;
+  }
+  .legend-title {
+    font-size: 0.7rem;
+    color: #f5d87a;
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+    text-align: center;
+  }
+  .legend-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 2px 0;
+    font-size: 0.62rem;
+    color: #cccccc88;
+  }
+  .legend-icon { width: 22px; height: 22px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<h1>⚔ Final Fantasy Chess ⚔</h1>
+<p class="subtitle">PLAYER 1 vs PLAYER 2</p>
+
+<div class="theme-bar">
+  <button class="theme-btn active" id="btnFF" onclick="setTheme('ff')">⚔️ FF7 vs FF8</button>
+  <button class="theme-btn" id="btnMonster" onclick="setTheme('monster')">🐉 Monster Theme</button>
+</div>
+
+<div id="statusBar" class="status-bar">Giliran Player 1 (Putih)</div>
+
+<div class="nature-frame">
+  <!-- Trees decorations -->
+  <div class="trees-top" id="treesTop"></div>
+  <div class="trees-bottom" id="treesBottom"></div>
+  <div class="trees-left" id="treesLeft"></div>
+  <div class="trees-right" id="treesRight"></div>
+
+  <div class="board-wrap">
+    <div id="board"></div>
+    <div class="coords-file" id="coordsFile"></div>
+    <div class="coords-rank" id="coordsRank"></div>
+  </div>
+</div>
+
+<div class="controls">
+  <button class="ctrl-btn" onclick="newGame()">🔄 New Game</button>
+  <button class="ctrl-btn" onclick="undoMove()">↩ Undo</button>
+</div>
+<div class="move-log" id="moveLog"></div>
+
+<!-- Legend -->
+<div class="legend" id="legend"></div>
+
+<!-- Pawn promotion modal -->
+<div class="modal-overlay" id="promoModal">
+  <div class="modal">
+    <h2>✨ Promote Pawn ✨</h2>
+    <div class="promo-pieces" id="promoPieces"></div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// SVG PIECE DEFINITIONS
+// ============================================================
+
+// Color palettes
+const COLORS = {
+  white: { body: '#e8e8e8', accent: '#f5d87a', dark: '#aaaaaa', outline: '#555555' },
+  black: { body: '#6655aa', accent: '#cc44ff', dark: '#332266', outline: '#221133' }
+};
+
+function svgPiece(paths, color, w=80, h=80) {
+  const c = COLORS[color];
+  // Replace color tokens
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="${w}" height="${h}">`;
+  svg += paths.replace(/BODY/g, c.body).replace(/ACCENT/g, c.accent).replace(/DARK/g, c.dark).replace(/OUTLINE/g, c.outline);
+  svg += '</svg>';
+  return svg;
+}
+
+// ---- FF7 PIECES (Player 1 / White) ----
+// Cloud Strife — King (huge sword on back, spiky hair)
+function cloudKing(color) {
+  return svgPiece(`
+    <!-- body -->
+    <ellipse cx="40" cy="58" rx="14" ry="18" fill="BODY" stroke="OUTLINE" stroke-width="1.5"/>
+    <!-- head -->
+    <circle cx="40" cy="32" r="12" fill="BODY" stroke="OUTLINE" stroke-width="1.5"/>
+    <!-- spiky hair -->
+    <polygon points="28,28 24,16 32,26" fill="OUTLINE"/>
+    <polygon points="33,24 30,12 38,24" fill="OUTLINE"/>
+    <polygon points="40,22 40,10 46,22" fill="ACCENT"/>
+    <polygon points="47,24 52,14 50,26" fill="OUTLINE"/>
+    <!-- eyes -->
+    <circle cx="35" cy="31" r="2" fill="ACCENT"/>
+    <circle cx="45" cy="31" r="2" fill="#4488ff"/>
+    <!-- Buster sword -->
+    <rect x="56" y="10" width="8" height="55" rx="2" fill="DARK" stroke="OUTLINE" stroke-width="1"/>
+    <rect x="57" y="10" width="3" height="55" rx="1" fill="#888888"/>
+    <rect x="53" y="38" width="14" height="4" rx="1" fill="ACCENT"/>
+    <!-- arms -->
+    <rect x="22" y="44" width="8" height="16" rx="3" fill="BODY" stroke="OUTLINE" stroke-width="1"/>
+    <rect x="50" y="44" width="8" height="16" rx="3" fill="BODY" stroke="OUTLINE" stroke-width="1"/>
+    <!-- boots -->
+    <rect x="28" y="70" width="10" height="8" rx="2" fill="DARK"/>
+    <rect x="42" y="70" width="10" height="8" rx="2" fill="DARK"/>
+    <!-- crown indicator -->
+    <polygon points="30,18 35,12 40,18 45,12 50,18" fill="ACCENT" stroke="OUTLINE" stroke-width="1"/>
+  `, color);
+}
+
+// Tifa Lockhart — Queen (martial arts gloves, long hair)
+function tifaQueen(color) {
+  return svgPiece(`
+    <ellipse cx="40" cy="58" rx="13" ry="18" fill="BODY" stroke="OUTLINE" stroke-width="1.5"/>
+    <circle cx="40" cy="30" r="12" fill="BODY" stroke="OUTLINE" stroke-width="1.5"/>
+    <!-- long hair -->
+    <path d="M28,28 Q20,45 22,70" fill="none" stroke="OUTLINE" stroke-width="4" stroke-linecap="round"/>
+    <path d="M52,28 Q60,45 58,70" fill="none" stroke="OUTLINE" stroke-width="4" stroke-linecap="round"/>
+    <!-- face -->
+    <circle cx="36" cy="30" r="2" fill="OUTLINE"/>
+    <circle cx="44" cy="30" r="2" fill="OUTLINE"/>
+    <path d="M37,36 Q40,39 43,36" fill="none" stroke="OUTLINE" stroke-width="1.5"/>
+    <!-- gloves -->
+    <rect x="18" y="44" width="10" height="14" rx="4" fill="ACCENT" stroke="OUTLINE" stroke-width="1"/>
+    <rect x="52" y="44" width="10" height="14" rx="4" fill="ACCENT" stroke="OUTLINE" stroke-width="1"/>
+    <!-- fists -->
+    <circle cx="23" cy="60" r="5" fill="ACCENT" stroke="OUTLINE" stroke-width="1"/>
+    <circle cx="57" cy="60" r="5" fill="ACCENT" stroke="OUTLINE" stroke-width="1"/>
+    <!-- crown/queen marker -->
+    <path d="M26,16 L30,8 L36,16 L40,6 L44,16 L50,8 L54,16" fill="ACCENT" stroke="OUTLINE" stroke-width="1.2"/>
+    <!-- boots -->
+    <rect x="30" y="70" width="9" height="8" rx="2" fill="DARK"/>
+    <rect x="42" y="70" width="9" height="8" rx="2" fill="DARK"/>
+  `, color);
+}
+
+// Aerith Gainsborough — Bishop (staff, braided hair, ribbon)
+function aerithBishop(color) {
+  return svgPiece(`
+    <ellipse cx="40" cy="58" rx="11" ry="18" fill="BODY" stroke="OUTLINE" stroke-width="1.5"/>
+    <circle cx="40" cy="30" r="11" fill="BODY" stroke="OUTLINE" stroke-width="1.5"/>
+    <!-- braid -->
+    <path d="M34,38 Q28,55 30,78" fill="none" stroke="OUTLINE" stroke-width="3"/>
+    <!-- ribbon -->
+    <path d="M28,24 Q32,20 36,24" fill="ACCENT" stroke="OUTLINE" stroke-width="1"/>
+    <!-- eyes -->
+    <ellipse cx="36" cy="29" rx="2.5" ry="2" fill="#44aa44"/>
+    <ellipse cx="44" cy="29" rx="2.5" ry="2" fill="#44aa44"/>
+    <!-- smile -->
+    <path d="M37,35 Q40,38 43,35" fill="none" stroke="OUTLINE" stroke-width="1.5"/>
+    <!-- staff -->
+    <line x1="60" y1="5" x2="60" y2="78" stroke="DARK" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="60" cy="8" r="6" fill="ACCENT" stroke="OUTLINE" stroke-width="1.5"/>
+    <circle cx="60" cy="8" r="3" fill="#ffffff88"/>
+    <!-- dress -->
+    <path d="M29,50 Q40,46 51,50 L55,78 L25,78 Z" fill="ACCENT" stroke="OUTLINE" stroke-width="1"/>
+    <!-- cross marker for bishop -->
+    <line x1="40" y1="14" x2="40" y2="22" stroke="OUTLINE" stroke-width="2"/>
+    <line x1="36" y1="17" x2="44" y2="17" stroke="OUTLINE" stroke-width="2"/>
+  `, color);
+}
+
+// Barret Wallace — Rook (gun-arm, big build)
+function barretRook(color) {
+  return svgPiece(`
+    <!-- big body -->
+    <ellipse cx="40" cy="56" rx="18" ry="22" fill="BODY" stroke="OUTLINE" stroke-width="2"/>
+    <circle cx="40" cy="28" r="13" fill="BODY" stroke="OUTLINE" stroke-width="2"/>
+    <!-- beard/face -->
+    <rect x="32" y="32" width="16" height="8" rx="3" fill="DARK"/>
+    <circle cx="35" cy="27" r="2.5" fill="OUTLINE"/>
+    <circle cx="45" cy="27" r="2.5" fill="OUTLINE"/>
+    <!-- gun arm (right) -->
+    <rect x="52" y="38" width="20" height="12" rx="3" fill="DARK" stroke="OUTLINE" stroke-width="1.5"/>
+    <rect x="66" y="40" width="12" height="8" rx="2" fill="#333333"/>
+    <circle cx="62" cy="43" r="3" fill="OUTLINE"/>
+    <!-- normal arm (left) -->
+    <rect x="10" y="38" width="12" height="20" rx="4" fill="BODY" stroke="OUTLINE" stroke-width="1"/>
+    <!-- boots -->
+    <rect x="26" y="72" width="12" height="7" rx="2" fill="DARK"/>
+    <rect x="42" y="72" width="12" height="7" rx="2" fill="DARK"/>
+    <!-- tower crown for rook -->
+    <rect x="28" y="10" width="24" height="8" rx="1" fill="DARK"/>
+    <rect x="26" y="8" width="7" height="10" rx="1" fill="DARK"/>
+    <rect x="36" y="8" width="7" height="10" rx="1" fill="DARK"/>
+    <rect x="46" y="8" width="7" height="10" rx="1" fill="DARK"/>
+  `, color);
+}
+
+// Red XIII — Knight (beast, scar, feathers)
+function redKnight(color) {
+  return svgPiece(`
+    <!-- beast body -->
+    <ellipse cx="40" cy="55" rx="20" ry="24" fill="#cc4422" stroke="OUTLINE" stroke-width="2"/>
+    <!-- head -->
+    <ellipse cx="40" cy="26" rx="16" ry="14" fill="#cc4422" stroke="OUTLINE" stroke-width="2"/>
+    <!-- mane -->
+    <path d="M24,20 Q18,10 26,8 Q30,6 32,14" fill="#aa2200"/>
+    <path d="M56,20 Q62,10 54,8 Q50,6 48,14" fill="#aa2200"/>
+    <path d="M30,14 Q28,4 36,6" fill="#aa2200"/>
+    <path d="M50,14 Q52,4 44,6" fill="#aa2200"/>
+    <!-- eye scar -->
+    <line x1="32" y1="20" x2="38" y2="26" stroke="#ffaa00" stroke-width="2"/>
+    <!-- eyes -->
+    <circle cx="33" cy="24" r="4" fill="#ffaa00"/>
+    <circle cx="47" cy="24" r="4" fill="#ffaa00"/>
+    <circle cx="33" cy="24" r="2" fill="OUTLINE"/>
+    <circle cx="47" cy="24" r="2" fill="OUTLINE"/>
+    <!-- nose/snout -->
+    <ellipse cx="40" cy="34" rx="7" ry="5" fill="#bb3311"/>
+    <circle cx="38" cy="34" r="2" fill="OUTLINE"/>
+    <circle cx="42" cy="34" r="2" fill="OUTLINE"/>
+    <!-- tail flame -->
+    <path d="M56,65 Q72,55 68,40 Q64,50 60,48 Q66,38 60,30 Q55,45 58,55 Q55,52 54,60 Z" fill="#ffaa00"/>
+    <!-- legs -->
+    <rect x="26" y="68" width="10" height="10" rx="3" fill="#aa3311"/>
+    <rect x="44" y="68" width="10" height="10" rx="3" fill="#aa3311"/>
+    <!-- feathers on head -->
+    <path d="M40,12 Q36,2 40,0 Q44,2 40,12" fill="#ffaa00"/>
+  `, color);
+}
+
+// SOLDIER Pawn (FF7) - uniform helmet
+function soldierPawn(color) {
+  return svgPiece(`
+    <!-- body -->
+    <rect x="28" y="44" width="24" height="26" rx="4" fill="DARK" stroke="OUTLINE" stroke-width="1.5"/>
+    <!-- chest armor -->
+    <rect x="30" y="46" width="20" height="14" rx="2" fill="BODY" stroke="OUTLINE" stroke-width="1"/>
+    <!-- helmet -->
+    <ellipse cx="40" cy="32" rx="14" ry="14" fill="DARK" stroke="OUTLINE" stroke-width="2"/>
+    <!-- visor -->
+    <path d="M27,32 Q40,26 53,32" fill="ACCENT" stroke="OUTLINE" stroke-width="1"/>
+    <ellipse cx="40" cy="32" rx="14" ry="6" fill="ACCENT" opacity="0.6"/>
+    <!-- SOLDIER mark -->
+    <text x="40" y="55" text-anchor="middle" font-size="8" fill="ACCENT" font-family="sans-serif" font-weight="bold">S</text>
+    <!-- boots -->
+    <rect x="30" y="67" width="9" height="7" rx="2" fill="OUTLINE"/>
+    <rect x="41" y="67" width="9" height="7" rx="2" fill="OUTLINE"/>
+  `, color);
+}
+
+// ---- FF8 PIECES (Player 2 / Black) ----
+// Squall Leonhart — King (gunblade, scar on face)
+function squallKing(color) {
+  return svgPiece(`
+    <ellipse cx="40" cy="58" rx="13" ry="18" fill="BODY" stroke="OUTLINE" stroke-width="1.5"/>
+    <circle cx="40" cy="30" r="11" fill="BODY" stroke="OUTLINE" stroke-width="1.5"/>
+    <!-- scar -->
+    <line x1="35" y1="26" x2="38" y2="34" stroke="#ff6666" stroke-width="1.8" stroke-linecap="round"/>
+    <!-- eyes (half-closed) -->
+    <path d="M33,29 Q36,26 39,29" fill="none" stroke="OUTLINE" stroke-width="1.5"/>
+    <path d="M41,29 Q44,26 47,29" fill="none" stroke="OUTLINE" stroke-width="1.5"/>
+    <!-- fur collar -->
+    <path d="M27,42 Q40,36 53,42 Q55,50 40,48 Q25,50 27,42 Z" fill="ACCENT" stroke="OUTLINE" stroke-width="1"/>
+    <!-- Gunblade -->
+    <path d="M56,8 L62,12 L60,70 L54,70 L52,12 Z" fill="DARK" stroke="OUTLINE" stroke-width="1"/>
+    <path d="M54,30 L68,22 L66,28 L55,34 Z" fill="ACCENT" stroke="OUTLINE" stroke-width="1"/>
+    <rect x="53" y="11" width="3" height="50" rx="1" fill="#555"/>
+    <!-- arms -->
+    <rect x="22" y="44" width="8" height="16" rx="3" fill="BODY" stroke="OUTLINE" stroke-width="1"/>
+    <rect x="50" y="44" width="8" height="16" rx="3" fill="BODY" stroke="OUTLINE" stroke-width="1"/>
+    <!-- boots -->
+    <rect x="28" y="70" width="10" height="8" rx="2" fill="DARK"/>
+    <rect x="42" y="70" width="10" height="8" rx="2" fill="DARK"/>
+    <!-- crown -->
+    <polygon points="30,18 35,11 40,18 45,11 50,18" fill="ACCENT" stroke="OUTLINE" stroke-width="1"/>
+  `, color);
+}
+
+// Rinoa Heartilly — Queen (angel wings, blue jacket)
+function rinoaQueen(color) {
+  return svgPiece(`
+    <!-- wings -->
+    <path d="M12,40 Q4,20 14,10 Q20,18 18,38 Z" fill="#ffffff88" stroke="OUTLINE" stroke-width="1"/>
+    <path d="M68,40 Q76,20 66,10 Q60,18 62,38 Z" fill="#ffffff88" stroke="OUTLINE" stroke-width="1"/>
+    <!-- small wing detail -->
+    <path d="M14,40 Q8,30 12,22" fill="none" stroke="#ffffff55" stroke-width="1.5"/>
+    <path d="M66,40 Q72,30 68,22" fill="none" stroke="#ffffff55" stroke-width="1.5"/>
+    <!-- body -->
+    <ellipse cx="40" cy="57" rx="12" ry="18" fill="BODY" stroke="OUTLINE" stroke-width="1.5"/>
+    <!-- blue jacket -->
+    <path d="M28,50 Q40,46 52,50 L54,70 L26,70 Z" fill="DARK" stroke="OUTLINE" stroke-width="1"/>
+    <!-- head -->
+    <circle cx="40" cy="28" r="11" fill="BODY" stroke="OUTLINE" stroke-width="1.5"/>
+    <!-- hair with side sweep -->
+    <path d="M30,22 Q26,16 32,12 Q38,10 40,18" fill="OUTLINE"/>
+    <path d="M28,28 Q20,22 24,32" fill="none" stroke="OUTLINE" stroke-width="3" stroke-linecap="round"/>
+    <!-- eyes -->
+    <circle cx="36" cy="27" r="2.5" fill="#6688ff"/>
+    <circle cx="44" cy="27" r="2.5" fill="#6688ff"/>
+    <!-- queen crown -->
+    <path d="M26,14 L30,7 L36,14 L40,5 L44,14 L50,7 L54,14" fill="ACCENT" stroke="OUTLINE" stroke-width="1.2"/>
+    <!-- boots -->
+    <rect x="30" y="70" width="9" height="8" rx="2" fill="OUTLINE"/>
+    <rect x="42" y="70" width="9" height="8" rx="2" fill="OUTLINE"/>
+  `, color);
+}
+
+// Quistis Trepe — Bishop (whip, glasses, teacher look)
+function quistisBishop(color) {
+  return svgPiece(`
+    <ellipse cx="40" cy="57" rx="11" ry="19" fill="BODY" stroke="OUTLINE" stroke-width="1.5"/>
+    <circle cx="40" cy="28" r="11" fill="BODY" stroke="OUTLINE" stroke-width="1.5"/>
+    <!-- glasses -->
+    <rect x="30" y="25" width="9" height="6" rx="2" fill="none" stroke="ACCENT" stroke-width="1.5"/>
+    <rect x="41" y="25" width="9" height="6" rx="2" fill="none" stroke="ACCENT" stroke-width="1.5"/>
+    <line x1="39" y1="28" x2="41" y2="28" stroke="ACCENT" stroke-width="1.5"/>
+    <!-- hair pulled back -->
+    <path d="M30,22 Q32,12 40,14 Q48,12 50,22" fill="OUTLINE"/>
+    <!-- whip -->
+    <path d="M55,20 Q65,15 68,25 Q72,35 65,40 Q60,44 55,55 Q52,62 58,68" fill="none" stroke="DARK" stroke-width="3" stroke-linecap="round"/>
+    <!-- hand holding whip -->
+    <circle cx="55" cy="22" r="5" fill="BODY" stroke="OUTLINE" stroke-width="1"/>
+    <!-- dress -->
+    <path d="M29,48 Q40,44 51,48 L54,78 L26,78 Z" fill="ACCENT" stroke="OUTLINE" stroke-width="1"/>
+    <!-- cross for bishop -->
+    <line x1="40" y1="13" x2="40" y2="20" stroke="OUTLINE" stroke-width="2"/>
+    <line x1="36" y1="16" x2="44" y2="16" stroke="OUTLINE" stroke-width="2"/>
+  `, color);
+}
+
+// Zell Dincht — Rook (tattoo, martial arts, big)
+function zellRook(color) {
+  return svgPiece(`
+    <!-- big body -->
+    <ellipse cx="40" cy="56" rx="16" ry="22" fill="BODY" stroke="OUTLINE" stroke-width="2"/>
+    <circle cx="40" cy="28" r="12" fill="BODY" stroke="OUTLINE" stroke-width="2"/>
+    <!-- facial tattoo (left side) -->
+    <path d="M28,24 Q24,20 26,16 Q30,18 30,24" fill="ACCENT"/>
+    <path d="M26,28 Q22,26 24,22" fill="none" stroke="ACCENT" stroke-width="1.5"/>
+    <!-- spiky hair -->
+    <polygon points="36,16 32,6 40,14" fill="OUTLINE"/>
+    <polygon points="42,15 40,4 46,14" fill="OUTLINE"/>
+    <!-- eyes -->
+    <circle cx="36" cy="27" r="2.5" fill="OUTLINE"/>
+    <circle cx="44" cy="27" r="2.5" fill="OUTLINE"/>
+    <!-- wide grin -->
+    <path d="M33,33 Q40,38 47,33" fill="none" stroke="OUTLINE" stroke-width="2"/>
+    <!-- fists raised -->
+    <rect x="12" y="40" width="12" height="12" rx="4" fill="BODY" stroke="OUTLINE" stroke-width="1.5"/>
+    <rect x="56" y="40" width="12" height="12" rx="4" fill="BODY" stroke="OUTLINE" stroke-width="1.5"/>
+    <circle cx="18" cy="52" r="5" fill="ACCENT" stroke="OUTLINE" stroke-width="1"/>
+    <circle cx="62" cy="52" r="5" fill="ACCENT" stroke="OUTLINE" stroke-width="1"/>
+    <!-- boots -->
+    <rect x="26" y="72" width="11" height="7" rx="2" fill="DARK"/>
+    <rect x="43" y="72" width="11" height="7" rx="2" fill="DARK"/>
+    <!-- rook tower crown -->
+    <rect x="28" y="10" width="24" height="8" rx="1" fill="DARK"/>
+    <rect x="26" y="8" width="7" height="10" rx="1" fill="DARK"/>
+    <rect x="36" y="8" width="7" height="10" rx="1" fill="DARK"/>
+    <rect x="46" y="8" width="7" height="10" rx="1" fill="DARK"/>
+  `, color);
+}
+
+// Irvine Kinneas — Knight (rifle, cowboy hat)
+function irvineKnight(color) {
+  return svgPiece(`
+    <!-- body -->
+    <ellipse cx="40" cy="57" rx="13" ry="19" fill="BODY" stroke="OUTLINE" stroke-width="1.5"/>
+    <!-- cowboy hat -->
+    <ellipse cx="40" cy="20" rx="18" ry="4" fill="DARK" stroke="OUTLINE" stroke-width="1.5"/>
+    <rect x="30" y="10" width="20" height="12" rx="3" fill="DARK" stroke="OUTLINE" stroke-width="1.5"/>
+    <!-- hat band -->
+    <rect x="30" y="18" width="20" height="3" rx="1" fill="ACCENT"/>
+    <!-- head -->
+    <circle cx="40" cy="30" r="10" fill="BODY" stroke="OUTLINE" stroke-width="1.5"/>
+    <!-- long hair -->
+    <path d="M30,28 Q24,38 26,50" fill="none" stroke="ACCENT" stroke-width="3" stroke-linecap="round"/>
+    <!-- eyes -->
+    <circle cx="36" cy="29" r="2" fill="OUTLINE"/>
+    <circle cx="44" cy="29" r="2" fill="OUTLINE"/>
+    <!-- rifle -->
+    <rect x="50" y="25" width="26" height="6" rx="2" fill="DARK" stroke="OUTLINE" stroke-width="1"/>
+    <rect x="68" y="22" width="8" height="4" rx="1" fill="#333333"/>
+    <rect x="54" y="30" width="8" height="10" rx="2" fill="DARK"/>
+    <!-- arm holding rifle -->
+    <rect x="48" y="38" width="8" height="16" rx="3" fill="BODY" stroke="OUTLINE" stroke-width="1"/>
+    <!-- boots -->
+    <rect x="28" y="70" width="10" height="8" rx="2" fill="DARK"/>
+    <rect x="42" y="70" width="10" height="8" rx="2" fill="DARK"/>
+  `, color);
+}
+
+// SeeD Cadet Pawn (FF8) — uniform
+function seedPawn(color) {
+  return svgPiece(`
+    <!-- body uniform -->
+    <rect x="28" y="44" width="24" height="26" rx="4" fill="DARK" stroke="OUTLINE" stroke-width="1.5"/>
+    <!-- SeeD jacket -->
+    <rect x="30" y="46" width="20" height="14" rx="2" fill="BODY" stroke="OUTLINE" stroke-width="1"/>
+    <!-- SeeD emblem -->
+    <circle cx="40" cy="52" r="4" fill="ACCENT" stroke="OUTLINE" stroke-width="0.5"/>
+    <text x="40" y="55" text-anchor="middle" font-size="5" fill="OUTLINE" font-family="sans-serif" font-weight="bold">S</text>
+    <!-- head with beret -->
+    <circle cx="40" cy="30" r="11" fill="BODY" stroke="OUTLINE" stroke-width="1.5"/>
+    <!-- beret -->
+    <ellipse cx="40" cy="22" rx="13" ry="6" fill="DARK" stroke="OUTLINE" stroke-width="1.5"/>
+    <ellipse cx="42" cy="20" rx="4" ry="3" fill="DARK"/>
+    <!-- eyes -->
+    <circle cx="36" cy="31" r="2" fill="OUTLINE"/>
+    <circle cx="44" cy="31" r="2" fill="OUTLINE"/>
+    <!-- boots -->
+    <rect x="29" y="67" width="9" height="7" rx="2" fill="OUTLINE"/>
+    <rect x="42" y="67" width="9" height="7" rx="2" fill="OUTLINE"/>
+  `, color);
+}
+
+// ---- MONSTER PIECES ----
+// Bahamut — King
+function bahamutKing(color) {
+  return svgPiece(`
+    <!-- wings -->
+    <path d="M8,50 Q2,30 10,15 Q18,25 16,45 Z" fill="DARK" stroke="OUTLINE" stroke-width="1"/>
+    <path d="M72,50 Q78,30 70,15 Q62,25 64,45 Z" fill="DARK" stroke="OUTLINE" stroke-width="1"/>
+    <!-- wing webbing -->
+    <path d="M10,40 L8,25 L14,35" fill="DARK" opacity="0.7"/>
+    <path d="M70,40 L72,25 L66,35" fill="DARK" opacity="0.7"/>
+    <!-- body -->
+    <ellipse cx="40" cy="56" rx="18" ry="20" fill="BODY" stroke="OUTLINE" stroke-width="2"/>
+    <!-- head -->
+    <ellipse cx="40" cy="28" rx="15" ry="18" fill="BODY" stroke="OUTLINE" stroke-width="2"/>
+    <!-- horns -->
+    <polygon points="28,16 22,2 34,14" fill="ACCENT"/>
+    <polygon points="52,16 58,2 46,14" fill="ACCENT"/>
+    <!-- eyes glowing -->
+    <ellipse cx="34" cy="26" rx="4" ry="5" fill="#ff4400"/>
+    <ellipse cx="46" cy="26" rx="4" ry="5" fill="#ff4400"/>
+    <ellipse cx="34" cy="26" rx="2" ry="3" fill="#ffaa00"/>
+    <ellipse cx="46" cy="26" rx="2" ry="3" fill="#ffaa00"/>
+    <!-- snout/fangs -->
+    <ellipse cx="40" cy="36" rx="8" ry="5" fill="DARK"/>
+    <polygon points="36,38 34,46 38,42" fill="white"/>
+    <polygon points="44,38 46,46 42,42" fill="white"/>
+    <!-- tail -->
+    <path d="M54,65 Q68,60 72,72 Q62,68 60,78" fill="DARK" stroke="OUTLINE" stroke-width="1"/>
+    <!-- crown -->
+    <polygon points="30,10 35,3 40,10 45,3 50,10" fill="ACCENT" stroke="OUTLINE" stroke-width="1"/>
+  `, color);
+}
+
+// Shiva — Queen
+function shivaQueen(color) {
+  return svgPiece(`
+    <!-- ice crystals around -->
+    <polygon points="8,30 12,20 14,30" fill="#aaddff88"/>
+    <polygon points="70,30 68,20 66,30" fill="#aaddff88"/>
+    <polygon points="20,10 22,2 24,10" fill="#aaddff66"/>
+    <polygon points="58,10 60,2 62,10" fill="#aaddff66"/>
+    <!-- body -->
+    <ellipse cx="40" cy="56" rx="14" ry="20" fill="#aaddff" stroke="OUTLINE" stroke-width="1.5"/>
+    <!-- ice dress -->
+    <path d="M26,52 Q40,46 54,52 L58,80 L22,80 Z" fill="#88ccff" stroke="OUTLINE" stroke-width="1"/>
+    <!-- head -->
+    <circle cx="40" cy="28" r="12" fill="#cceeFF" stroke="OUTLINE" stroke-width="1.5"/>
+    <!-- ice headdress -->
+    <polygon points="30,18 28,8 36,16" fill="#88ccff"/>
+    <polygon points="40,16 38,4 42,4 40,16" fill="#88ccff"/>
+    <polygon points="50,18 52,8 44,16" fill="#88ccff"/>
+    <!-- eyes (blue) -->
+    <ellipse cx="36" cy="27" rx="3" ry="4" fill="#0044aa"/>
+    <ellipse cx="44" cy="27" rx="3" ry="4" fill="#0044aa"/>
+    <circle cx="36" cy="27" r="1.5" fill="#aaddff"/>
+    <circle cx="44" cy="27" r="1.5" fill="#aaddff"/>
+    <!-- lips blue -->
+    <path d="M36,34 Q40,37 44,34" fill="#4488cc" stroke="#2266aa" stroke-width="1"/>
+    <!-- queen crown -->
+    <path d="M26,16 L30,8 L36,15 L40,5 L44,15 L50,8 L54,16" fill="#88ccff" stroke="OUTLINE" stroke-width="1.2"/>
+    <!-- arms with frost -->
+    <rect x="18" y="44" width="9" height="18" rx="4" fill="#aaddff" stroke="OUTLINE" stroke-width="1"/>
+    <rect x="53" y="44" width="9" height="18" rx="4" fill="#aaddff" stroke="OUTLINE" stroke-width="1"/>
+  `, color);
+}
+
+// Ifrit — Bishop
+function ifritBishop(color) {
+  return svgPiece(`
+    <!-- flames around -->
+    <path d="M10,70 Q8,55 14,45 Q16,55 18,50 Q20,40 22,45 Q24,35 26,45 Q27,38 30,48 Z" fill="#ff6600" opacity="0.7"/>
+    <path d="M70,70 Q72,55 66,45 Q64,55 62,50 Q60,40 58,45 Q56,35 54,45 Q53,38 50,48 Z" fill="#ff6600" opacity="0.7"/>
+    <!-- body -->
+    <ellipse cx="40" cy="56" rx="15" ry="20" fill="#cc3300" stroke="OUTLINE" stroke-width="2"/>
+    <!-- head -->
+    <ellipse cx="40" cy="28" rx="14" ry="14" fill="#cc3300" stroke="OUTLINE" stroke-width="2"/>
+    <!-- horns (fire) -->
+    <path d="M26,18 Q20,6 28,8 Q28,14 30,16" fill="#ff8800"/>
+    <path d="M54,18 Q60,6 52,8 Q52,14 50,16" fill="#ff8800"/>
+    <!-- eyes (yellow) -->
+    <ellipse cx="34" cy="26" rx="4" ry="4" fill="#ffaa00"/>
+    <ellipse cx="46" cy="26" rx="4" ry="4" fill="#ffaa00"/>
+    <circle cx="34" cy="26" r="2" fill="#ff4400"/>
+    <circle cx="46" cy="26" r="2" fill="#ff4400"/>
+    <!-- maw -->
+    <path d="M32,34 Q40,40 48,34" fill="#ff2200" stroke="OUTLINE" stroke-width="1"/>
+    <polygon points="35,34 33,42 37,38" fill="white"/>
+    <polygon points="45,34 47,42 43,38" fill="white"/>
+    <!-- arms with claws -->
+    <rect x="18" y="44" width="10" height="20" rx="4" fill="#cc3300" stroke="OUTLINE" stroke-width="1.5"/>
+    <rect x="52" y="44" width="10" height="20" rx="4" fill="#cc3300" stroke="OUTLINE" stroke-width="1.5"/>
+    <!-- claws -->
+    <path d="M18,62 L14,70 M20,63 L17,72 M22,63 L20,72" stroke="#ffaa00" stroke-width="2"/>
+    <path d="M62,62 L66,70 M60,63 L63,72 M58,63 L60,72" stroke="#ffaa00" stroke-width="2"/>
+    <!-- cross for bishop -->
+    <line x1="40" y1="12" x2="40" y2="20" stroke="#ffaa00" stroke-width="2"/>
+    <line x1="36" y1="15" x2="44" y2="15" stroke="#ffaa00" stroke-width="2"/>
+  `, color);
+}
+
+// Iron Giant — Rook
+function ironGiantRook(color) {
+  return svgPiece(`
+    <!-- giant metal body -->
+    <rect x="18" y="36" width="44" height="36" rx="4" fill="BODY" stroke="OUTLINE" stroke-width="2.5"/>
+    <!-- metal panels -->
+    <rect x="20" y="38" width="18" height="14" rx="2" fill="DARK" stroke="OUTLINE" stroke-width="1"/>
+    <rect x="42" y="38" width="18" height="14" rx="2" fill="DARK" stroke="OUTLINE" stroke-width="1"/>
+    <rect x="24" y="55" width="32" height="10" rx="2" fill="DARK" stroke="OUTLINE" stroke-width="1"/>
+    <!-- neck -->
+    <rect x="32" y="24" width="16" height="14" rx="2" fill="BODY" stroke="OUTLINE" stroke-width="2"/>
+    <!-- head (boxy) -->
+    <rect x="24" y="10" width="32" height="24" rx="3" fill="BODY" stroke="OUTLINE" stroke-width="2.5"/>
+    <!-- eyes (red LED) -->
+    <rect x="28" y="16" width="8" height="5" rx="1" fill="#ff2200"/>
+    <rect x="44" y="16" width="8" height="5" rx="1" fill="#ff2200"/>
+    <!-- grill mouth -->
+    <rect x="30" y="24" width="20" height="5" rx="1" fill="DARK"/>
+    <line x1="34" y1="24" x2="34" y2="29" stroke="BODY" stroke-width="1"/>
+    <line x1="38" y1="24" x2="38" y2="29" stroke="BODY" stroke-width="1"/>
+    <line x1="42" y1="24" x2="42" y2="29" stroke="BODY" stroke-width="1"/>
+    <line x1="46" y1="24" x2="46" y2="29" stroke="BODY" stroke-width="1"/>
+    <!-- sword -->
+    <rect x="60" y="8" width="10" height="52" rx="2" fill="DARK" stroke="OUTLINE" stroke-width="1.5"/>
+    <rect x="57" y="30" width="16" height="5" rx="1" fill="ACCENT"/>
+    <!-- boots -->
+    <rect x="20" y="70" width="16" height="9" rx="2" fill="DARK"/>
+    <rect x="44" y="70" width="16" height="9" rx="2" fill="DARK"/>
+    <!-- rook tower crown -->
+    <rect x="22" y="4" width="36" height="8" rx="1" fill="DARK"/>
+    <rect x="20" y="2" width="8" height="10" rx="1" fill="DARK"/>
+    <rect x="32" y="2" width="8" height="10" rx="1" fill="DARK"/>
+    <rect x="44" y="2" width="8" height="10" rx="1" fill="DARK"/>
+    <rect x="52" y="2" width="8" height="10" rx="1" fill="DARK"/>
+  `, color);
+}
+
+// Chocobo — Knight
+function chocoboKnight(color) {
+  return svgPiece(`
+    <!-- body (fluffy) -->
+    <ellipse cx="40" cy="54" rx="18" ry="22" fill="#ffdd00" stroke="#cc8800" stroke-width="2"/>
+    <!-- wings -->
+    <path d="M22,45 Q10,38 12,25 Q20,32 24,42 Z" fill="#ffcc00" stroke="#cc8800" stroke-width="1"/>
+    <path d="M58,45 Q70,38 68,25 Q60,32 56,42 Z" fill="#ffcc00" stroke="#cc8800" stroke-width="1"/>
+    <!-- neck -->
+    <ellipse cx="40" cy="32" rx="10" ry="16" fill="#ffdd00" stroke="#cc8800" stroke-width="1.5"/>
+    <!-- head -->
+    <ellipse cx="40" cy="18" rx="14" ry="12" fill="#ffdd00" stroke="#cc8800" stroke-width="2"/>
+    <!-- beak -->
+    <path d="M32,20 Q40,28 48,20 L46,16 Q40,22 34,16 Z" fill="#ff8800" stroke="#cc4400" stroke-width="1"/>
+    <!-- crest feathers -->
+    <path d="M36,8 Q32,0 36,2" fill="#ffaa00" stroke="#cc6600" stroke-width="1"/>
+    <path d="M40,6 Q38,0 40,-2 Q42,0 40,6" fill="#ffaa00" stroke="#cc6600" stroke-width="1"/>
+    <path d="M44,8 Q48,0 44,2" fill="#ffaa00" stroke="#cc6600" stroke-width="1"/>
+    <!-- eyes -->
+    <circle cx="34" cy="16" r="4" fill="OUTLINE"/>
+    <circle cx="46" cy="16" r="4" fill="OUTLINE"/>
+    <circle cx="34" cy="16" r="2" fill="#ff6600"/>
+    <circle cx="46" cy="16" r="2" fill="#ff6600"/>
+    <!-- saddle (knight) -->
+    <path d="M26,52 Q40,46 54,52 L52,62 L28,62 Z" fill="BODY" stroke="OUTLINE" stroke-width="1.5"/>
+    <rect x="30" y="54" width="20" height="6" rx="2" fill="ACCENT" stroke="OUTLINE" stroke-width="1"/>
+    <!-- legs -->
+    <rect x="28" y="68" width="8" height="10" rx="2" fill="#ffcc00" stroke="#cc8800" stroke-width="1"/>
+    <rect x="44" y="68" width="8" height="10" rx="2" fill="#ffcc00" stroke="#cc8800" stroke-width="1"/>
+    <!-- talons -->
+    <path d="M28,76 L24,80 M31,77 L28,80 M34,76 L34,80" stroke="#cc8800" stroke-width="2"/>
+    <path d="M52,76 L56,80 M49,77 L52,80 M46,76 L46,80" stroke="#cc8800" stroke-width="2"/>
+  `, color);
+}
+
+// Moogle Pawn (Monster theme) — universal
+function mooglePawn(color) {
+  const c = color === 'white' ? '#ffeeee' : '#ddaaff';
+  const pompom = color === 'white' ? '#ff4466' : '#aa00ff';
+  return svgPiece(`
+    <!-- body (round fluffy) -->
+    <ellipse cx="40" cy="58" rx="16" ry="16" fill="${c}" stroke="OUTLINE" stroke-width="2"/>
+    <!-- head -->
+    <circle cx="40" cy="32" r="16" fill="${c}" stroke="OUTLINE" stroke-width="2"/>
+    <!-- bat wings -->
+    <path d="M24,42 Q10,35 8,22 Q16,28 20,40 Z" fill="#cc88cc" stroke="OUTLINE" stroke-width="1"/>
+    <path d="M56,42 Q70,35 72,22 Q64,28 60,40 Z" fill="#cc88cc" stroke="OUTLINE" stroke-width="1"/>
+    <!-- pom-pom antenna -->
+    <line x1="40" y1="16" x2="36" y2="6" stroke="OUTLINE" stroke-width="2"/>
+    <circle cx="34" cy="4" r="5" fill="${pompom}"/>
+    <!-- eyes -->
+    <ellipse cx="34" cy="30" rx="4" ry="5" fill="OUTLINE"/>
+    <ellipse cx="46" cy="30" rx="4" ry="5" fill="OUTLINE"/>
+    <circle cx="34" cy="30" r="2" fill="#ffffff88"/>
+    <circle cx="46" cy="30" r="2" fill="#ffffff88"/>
+    <!-- blush cheeks -->
+    <ellipse cx="30" cy="36" rx="4" ry="3" fill="#ffaabb" opacity="0.6"/>
+    <ellipse cx="50" cy="36" rx="4" ry="3" fill="#ffaabb" opacity="0.6"/>
+    <!-- small snout -->
+    <ellipse cx="40" cy="38" rx="5" ry="3" fill="${c}" stroke="OUTLINE" stroke-width="1"/>
+    <circle cx="38" cy="38" r="1.5" fill="OUTLINE"/>
+    <circle cx="42" cy="38" r="1.5" fill="OUTLINE"/>
+    <!-- feet -->
+    <ellipse cx="33" cy="73" rx="7" ry="4" fill="${c}" stroke="OUTLINE" stroke-width="1.5"/>
+    <ellipse cx="47" cy="73" rx="7" ry="4" fill="${c}" stroke="OUTLINE" stroke-width="1.5"/>
+    <!-- Kupo text -->
+    <text x="40" y="62" text-anchor="middle" font-size="7" fill="OUTLINE" font-family="sans-serif" font-style="italic">kupo</text>
+  `, color);
+}
+
+// Behemoth — Knight (monster)
+function behemothKnight(color) {
+  return svgPiece(`
+    <!-- huge body -->
+    <ellipse cx="40" cy="55" rx="22" ry="22" fill="BODY" stroke="OUTLINE" stroke-width="2"/>
+    <!-- head -->
+    <ellipse cx="40" cy="26" rx="18" ry="16" fill="BODY" stroke="OUTLINE" stroke-width="2"/>
+    <!-- massive horn -->
+    <polygon points="36,10 30,0 46,10" fill="ACCENT" stroke="OUTLINE" stroke-width="1.5"/>
+    <!-- smaller horns -->
+    <polygon points="26,18 20,10 30,16" fill="DARK"/>
+    <polygon points="54,18 60,10 50,16" fill="DARK"/>
+    <!-- eyes (small, fierce) -->
+    <ellipse cx="32" cy="24" rx="4" ry="3" fill="#ff2200"/>
+    <ellipse cx="48" cy="24" rx="4" ry="3" fill="#ff2200"/>
+    <ellipse cx="32" cy="24" rx="2" ry="1.5" fill="OUTLINE"/>
+    <ellipse cx="48" cy="24" rx="2" ry="1.5" fill="OUTLINE"/>
+    <!-- fang mouth -->
+    <path d="M28,34 Q40,42 52,34" fill="DARK" stroke="OUTLINE" stroke-width="1"/>
+    <polygon points="32,34 30,44 34,40" fill="white"/>
+    <polygon points="40,36 39,46 41,46" fill="white"/>
+    <polygon points="48,34 50,44 46,40" fill="white"/>
+    <!-- arm/claw (left) -->
+    <path d="M18,50 Q8,45 6,56 Q14,52 16,62 Z" fill="BODY" stroke="OUTLINE" stroke-width="1.5"/>
+    <path d="M6,56 L2,60 M8,60 L4,66 M12,62 L10,68" stroke="ACCENT" stroke-width="2"/>
+    <!-- arm/claw (right) -->
+    <path d="M62,50 Q72,45 74,56 Q66,52 64,62 Z" fill="BODY" stroke="OUTLINE" stroke-width="1.5"/>
+    <path d="M74,56 L78,60 M72,60 L76,66 M68,62 L70,68" stroke="ACCENT" stroke-width="2"/>
+    <!-- legs -->
+    <rect x="28" y="70" width="12" height="9" rx="3" fill="BODY" stroke="OUTLINE" stroke-width="1.5"/>
+    <rect x="40" y="70" width="12" height="9" rx="3" fill="BODY" stroke="OUTLINE" stroke-width="1.5"/>
+  `, color);
+}
+
+// Diablos — Bishop (monster)
+function diablosBishop(color) {
+  return svgPiece(`
+    <!-- big bat wings -->
+    <path d="M6,60 Q0,40 8,20 Q16,32 14,54 Z" fill="DARK" stroke="OUTLINE" stroke-width="1"/>
+    <path d="M74,60 Q80,40 72,20 Q64,32 66,54 Z" fill="DARK" stroke="OUTLINE" stroke-width="1"/>
+    <path d="M14,54 Q12,40 18,30 Q22,40 20,52 Z" fill="DARK" opacity="0.7"/>
+    <path d="M66,54 Q68,40 62,30 Q58,40 60,52 Z" fill="DARK" opacity="0.7"/>
+    <!-- body (dark) -->
+    <ellipse cx="40" cy="55" rx="16" ry="20" fill="BODY" stroke="OUTLINE" stroke-width="2"/>
+    <!-- head -->
+    <circle cx="40" cy="28" r="14" fill="BODY" stroke="OUTLINE" stroke-width="2"/>
+    <!-- curved horns -->
+    <path d="M26,18 Q18,6 28,8 Q28,14 30,18" fill="ACCENT" stroke="OUTLINE" stroke-width="1.5"/>
+    <path d="M54,18 Q62,6 52,8 Q52,14 50,18" fill="ACCENT" stroke="OUTLINE" stroke-width="1.5"/>
+    <!-- glowing eyes -->
+    <ellipse cx="34" cy="26" rx="5" ry="5" fill="#ffaa00"/>
+    <ellipse cx="46" cy="26" rx="5" ry="5" fill="#ffaa00"/>
+    <circle cx="34" cy="26" r="2.5" fill="#ff6600"/>
+    <circle cx="46" cy="26" r="2.5" fill="#ff6600"/>
+    <!-- fangs -->
+    <path d="M30,34 Q40,40 50,34" fill="DARK" stroke="OUTLINE" stroke-width="1"/>
+    <polygon points="34,34 32,44 36,40" fill="white"/>
+    <polygon points="46,34 48,44 44,40" fill="white"/>
+    <!-- tail -->
+    <path d="M52,66 Q66,62 70,74 Q62,68 58,78" fill="DARK" stroke="OUTLINE" stroke-width="1"/>
+    <!-- diamond tail tip -->
+    <polygon points="58,72 54,78 58,84 62,78" fill="ACCENT"/>
+    <!-- bishop cross -->
+    <line x1="40" y1="12" x2="40" y2="20" stroke="ACCENT" stroke-width="2"/>
+    <line x1="36" y1="15" x2="44" y2="15" stroke="ACCENT" stroke-width="2"/>
+  `, color);
+}
+
+// Golem — Rook (monster)
+function golemRook(color) {
+  return svgPiece(`
+    <!-- stone body (large, blocky) -->
+    <rect x="16" y="34" width="48" height="38" rx="3" fill="BODY" stroke="OUTLINE" stroke-width="2.5"/>
+    <!-- stone cracks -->
+    <path d="M26,40 Q30,50 24,58" fill="none" stroke="DARK" stroke-width="1.5" opacity="0.6"/>
+    <path d="M50,36 Q48,48 54,56" fill="none" stroke="DARK" stroke-width="1.5" opacity="0.6"/>
+    <!-- neck -->
+    <rect x="30" y="22" width="20" height="14" rx="2" fill="BODY" stroke="OUTLINE" stroke-width="2"/>
+    <!-- head (huge stone block) -->
+    <rect x="18" y="6" width="44" height="20" rx="3" fill="BODY" stroke="OUTLINE" stroke-width="2.5"/>
+    <!-- glowing rune eyes -->
+    <rect x="24" y="10" width="10" height="7" rx="2" fill="#44ff88"/>
+    <rect x="46" y="10" width="10" height="7" rx="2" fill="#44ff88"/>
+    <!-- grimace -->
+    <rect x="28" y="19" width="24" height="4" rx="1" fill="DARK"/>
+    <line x1="32" y1="19" x2="32" y2="23" stroke="BODY" stroke-width="1.5"/>
+    <line x1="37" y1="19" x2="37" y2="23" stroke="BODY" stroke-width="1.5"/>
+    <line x1="43" y1="19" x2="43" y2="23" stroke="BODY" stroke-width="1.5"/>
+    <line x1="48" y1="19" x2="48" y2="23" stroke="BODY" stroke-width="1.5"/>
+    <!-- stone arms (massive) -->
+    <rect x="2" y="36" width="16" height="30" rx="4" fill="BODY" stroke="OUTLINE" stroke-width="2"/>
+    <rect x="62" y="36" width="16" height="30" rx="4" fill="BODY" stroke="OUTLINE" stroke-width="2"/>
+    <!-- fists -->
+    <rect x="2" y="62" width="16" height="12" rx="3" fill="DARK" stroke="OUTLINE" stroke-width="1.5"/>
+    <rect x="62" y="62" width="16" height="12" rx="3" fill="DARK" stroke="OUTLINE" stroke-width="1.5"/>
+    <!-- boots (stone) -->
+    <rect x="18" y="70" width="20" height="9" rx="2" fill="DARK"/>
+    <rect x="42" y="70" width="20" height="9" rx="2" fill="DARK"/>
+    <!-- rook tower crown -->
+    <rect x="14" y="0" width="52" height="8" rx="1" fill="DARK"/>
+    <rect x="12" y="-2" width="10" height="10" rx="1" fill="DARK"/>
+    <rect x="26" y="-2" width="10" height="10" rx="1" fill="DARK"/>
+    <rect x="44" y="-2" width="10" height="10" rx="1" fill="DARK"/>
+    <rect x="58" y="-2" width="10" height="10" rx="1" fill="DARK"/>
+  `, color);
+}
+
+// Neo Bahamut — King (dark version)
+function neoBahamutKing(color) {
+  return svgPiece(`
+    <!-- dark energy aura -->
+    <circle cx="40" cy="40" r="36" fill="#33006688" stroke="none"/>
+    <!-- wings (larger) -->
+    <path d="M6,55 Q0,30 10,12 Q20,25 16,50 Z" fill="DARK" stroke="OUTLINE" stroke-width="1.5"/>
+    <path d="M74,55 Q80,30 70,12 Q60,25 64,50 Z" fill="DARK" stroke="OUTLINE" stroke-width="1.5"/>
+    <path d="M16,50 Q10,32 18,20" fill="none" stroke="ACCENT" stroke-width="1" opacity="0.6"/>
+    <path d="M64,50 Q70,32 62,20" fill="none" stroke="ACCENT" stroke-width="1" opacity="0.6"/>
+    <!-- body -->
+    <ellipse cx="40" cy="56" rx="18" ry="20" fill="BODY" stroke="OUTLINE" stroke-width="2"/>
+    <!-- chest rune -->
+    <circle cx="40" cy="55" r="8" fill="ACCENT" opacity="0.4"/>
+    <circle cx="40" cy="55" r="5" fill="ACCENT" opacity="0.6"/>
+    <!-- head -->
+    <ellipse cx="40" cy="26" rx="16" ry="18" fill="BODY" stroke="OUTLINE" stroke-width="2"/>
+    <!-- horns (curved inward) -->
+    <path d="M24,16 Q14,2 22,0 Q26,6 28,14" fill="ACCENT" stroke="OUTLINE" stroke-width="1.5"/>
+    <path d="M56,16 Q66,2 58,0 Q54,6 52,14" fill="ACCENT" stroke="OUTLINE" stroke-width="1.5"/>
+    <!-- eyes (purple glow) -->
+    <ellipse cx="33" cy="24" rx="5" ry="5" fill="#aa44ff"/>
+    <ellipse cx="47" cy="24" rx="5" ry="5" fill="#aa44ff"/>
+    <ellipse cx="33" cy="24" rx="2.5" ry="2.5" fill="#ffffff"/>
+    <ellipse cx="47" cy="24" rx="2.5" ry="2.5" fill="#ffffff"/>
+    <!-- snout -->
+    <ellipse cx="40" cy="36" rx="9" ry="6" fill="DARK"/>
+    <polygon points="36,38 34,48 38,43" fill="white"/>
+    <polygon points="44,38 46,48 42,43" fill="white"/>
+    <!-- tail -->
+    <path d="M54,68 Q68,62 72,74" fill="DARK" stroke="OUTLINE" stroke-width="1"/>
+    <!-- crown -->
+    <polygon points="28,10 34,2 40,10 46,2 52,10" fill="ACCENT" stroke="OUTLINE" stroke-width="1.5"/>
+  `, color);
+}
+
+// Ultimecia — Queen (monster)
+function ultimeciaQueen(color) {
+  return svgPiece(`
+    <!-- cloak/tentacles -->
+    <path d="M16,70 Q10,55 14,35 Q20,48 22,42 Q24,32 28,42 L26,70 Z" fill="DARK" stroke="OUTLINE" stroke-width="1"/>
+    <path d="M64,70 Q70,55 66,35 Q60,48 58,42 Q56,32 52,42 L54,70 Z" fill="DARK" stroke="OUTLINE" stroke-width="1"/>
+    <!-- body -->
+    <ellipse cx="40" cy="56" rx="14" ry="20" fill="BODY" stroke="OUTLINE" stroke-width="2"/>
+    <!-- corset detail -->
+    <path d="M28,46 Q40,42 52,46 L52,66 L28,66 Z" fill="DARK" stroke="OUTLINE" stroke-width="1"/>
+    <path d="M34,42 L34,68" fill="none" stroke="ACCENT" stroke-width="1"/>
+    <path d="M40,40 L40,68" fill="none" stroke="ACCENT" stroke-width="1"/>
+    <path d="M46,42 L46,68" fill="none" stroke="ACCENT" stroke-width="1"/>
+    <!-- head -->
+    <circle cx="40" cy="26" r="12" fill="BODY" stroke="OUTLINE" stroke-width="2"/>
+    <!-- elaborate headdress -->
+    <path d="M28,20 Q22,8 30,6 Q32,14 34,18" fill="ACCENT" stroke="OUTLINE" stroke-width="1.5"/>
+    <path d="M52,20 Q58,8 50,6 Q48,14 46,18" fill="ACCENT" stroke="OUTLINE" stroke-width="1.5"/>
+    <path d="M38,14 Q36,4 40,2 Q44,4 42,14" fill="ACCENT" stroke="OUTLINE" stroke-width="1.5"/>
+    <!-- eyes (sharp, evil) -->
+    <path d="M30,24 L36,22 L36,26 Z" fill="#ff0044"/>
+    <path d="M50,24 L44,22 L44,26 Z" fill="#ff0044"/>
+    <!-- smile (sinister) -->
+    <path d="M33,32 Q40,36 47,32 Q44,38 36,38 Z" fill="#880022"/>
+    <!-- clawed hands -->
+    <path d="M18,48 L14,42 M20,47 L16,40 M22,48 L20,42" stroke="ACCENT" stroke-width="2"/>
+    <path d="M62,48 L66,42 M60,47 L64,40 M58,48 L60,42" stroke="ACCENT" stroke-width="2"/>
+    <!-- queen crown -->
+    <path d="M24,16 L28,8 L34,15 L40,5 L46,15 L52,8 L56,16" fill="ACCENT" stroke="OUTLINE" stroke-width="1.2"/>
+  `, color);
+}
+
+// ============================================================
+// PIECE REGISTRY
+// ============================================================
+const THEMES = {
+  ff: {
+    name: 'FF7 vs FF8',
+    white: {
+      label: 'FF7',
+      K: { name: 'Cloud',  svg: (c) => cloudKing(c) },
+      Q: { name: 'Tifa',   svg: (c) => tifaQueen(c) },
+      B: { name: 'Aerith', svg: (c) => aerithBishop(c) },
+      R: { name: 'Barret', svg: (c) => barretRook(c) },
+      N: { name: 'RedXIII',svg: (c) => redKnight(c) },
+      P: { name: 'SOLDIER',svg: (c) => soldierPawn(c) },
+    },
+    black: {
+      label: 'FF8',
+      K: { name: 'Squall',  svg: (c) => squallKing(c) },
+      Q: { name: 'Rinoa',   svg: (c) => rinoaQueen(c) },
+      B: { name: 'Quistis', svg: (c) => quistisBishop(c) },
+      R: { name: 'Zell',    svg: (c) => zellRook(c) },
+      N: { name: 'Irvine',  svg: (c) => irvineKnight(c) },
+      P: { name: 'SeeD',    svg: (c) => seedPawn(c) },
+    }
+  },
+  monster: {
+    name: 'Monster Theme',
+    white: {
+      label: 'Crystal',
+      K: { name: 'Bahamut',   svg: (c) => bahamutKing(c) },
+      Q: { name: 'Shiva',     svg: (c) => shivaQueen(c) },
+      B: { name: 'Ifrit',     svg: (c) => ifritBishop(c) },
+      R: { name: 'IronGiant', svg: (c) => ironGiantRook(c) },
+      N: { name: 'Chocobo',   svg: (c) => chocoboKnight(c) },
+      P: { name: 'Moogle',    svg: (c) => mooglePawn(c) },
+    },
+    black: {
+      label: 'Shadow',
+      K: { name: 'NeoBahamut', svg: (c) => neoBahamutKing(c) },
+      Q: { name: 'Ultimecia',  svg: (c) => ultimeciaQueen(c) },
+      B: { name: 'Diablos',    svg: (c) => diablosBishop(c) },
+      R: { name: 'Golem',      svg: (c) => golemRook(c) },
+      N: { name: 'Behemoth',   svg: (c) => behemothKnight(c) },
+      P: { name: 'MoogleDark', svg: (c) => mooglePawn(c) },
+    }
+  }
+};
+
+// ============================================================
+// CHESS ENGINE
+// ============================================================
+let board = [];
+let turn = 'white'; // 'white' | 'black'
+let selected = null; // {row, col}
+let validMoves = [];
+let gameOver = false;
+let enPassantTarget = null; // {row, col}
+let castlingRights = { white: { kSide: true, qSide: true }, black: { kSide: true, qSide: true } };
+let moveHistory = [];
+let lastMove = null;
+let currentTheme = 'ff';
+
+const FILES = ['a','b','c','d','e','f','g','h'];
+
+function initBoard() {
+  board = Array(8).fill(null).map(() => Array(8).fill(null));
+  // white pieces (row 6-7)
+  board[7] = [{c:'white',t:'R'},{c:'white',t:'N'},{c:'white',t:'B'},{c:'white',t:'Q'},{c:'white',t:'K'},{c:'white',t:'B'},{c:'white',t:'N'},{c:'white',t:'R'}];
+  board[6] = Array(8).fill(null).map(() => ({c:'white',t:'P'}));
+  // black pieces (row 0-1)
+  board[0] = [{c:'black',t:'R'},{c:'black',t:'N'},{c:'black',t:'B'},{c:'black',t:'Q'},{c:'black',t:'K'},{c:'black',t:'B'},{c:'black',t:'N'},{c:'black',t:'R'}];
+  board[1] = Array(8).fill(null).map(() => ({c:'black',t:'P'}));
+}
+
+function deepCopyBoard(b) {
+  return b.map(row => row.map(cell => cell ? {...cell} : null));
+}
+
+function getPieceMoves(b, row, col, ep, castling) {
+  const piece = b[row][col];
+  if (!piece) return [];
+  const moves = [];
+  const {c, t} = piece;
+  const dir = c === 'white' ? -1 : 1;
+
+  if (t === 'P') {
+    // Forward
+    const r1 = row + dir;
+    if (r1 >= 0 && r1 < 8 && !b[r1][col]) {
+      moves.push({row: r1, col, type: 'move'});
+      const startRow = c === 'white' ? 6 : 1;
+      const r2 = row + 2*dir;
+      if (row === startRow && !b[r2][col]) moves.push({row: r2, col, type: 'double'});
+    }
+    // Captures
+    for (const dc of [-1, 1]) {
+      const cc = col + dc;
+      if (cc >= 0 && cc < 8 && r1 >= 0 && r1 < 8) {
+        if (b[r1][cc] && b[r1][cc].c !== c) moves.push({row: r1, col: cc, type: 'capture'});
+        if (ep && ep.row === r1 && ep.col === cc) moves.push({row: r1, col: cc, type: 'enpassant'});
+      }
+    }
+  }
+
+  if (t === 'N') {
+    for (const [dr, dc] of [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]]) {
+      const r = row+dr, cc = col+dc;
+      if (r>=0&&r<8&&cc>=0&&cc<8) {
+        if (!b[r][cc] || b[r][cc].c !== c) moves.push({row:r,col:cc,type:b[r][cc]?'capture':'move'});
+      }
+    }
+  }
+
+  if (t === 'B' || t === 'Q') {
+    for (const [dr,dc] of [[-1,-1],[-1,1],[1,-1],[1,1]]) {
+      let r=row+dr, cc=col+dc;
+      while(r>=0&&r<8&&cc>=0&&cc<8) {
+        if (!b[r][cc]) { moves.push({row:r,col:cc,type:'move'}); r+=dr; cc+=dc; }
+        else { if(b[r][cc].c!==c) moves.push({row:r,col:cc,type:'capture'}); break; }
+      }
+    }
+  }
+
+  if (t === 'R' || t === 'Q') {
+    for (const [dr,dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+      let r=row+dr, cc=col+dc;
+      while(r>=0&&r<8&&cc>=0&&cc<8) {
+        if (!b[r][cc]) { moves.push({row:r,col:cc,type:'move'}); r+=dr; cc+=dc; }
+        else { if(b[r][cc].c!==c) moves.push({row:r,col:cc,type:'capture'}); break; }
+      }
+    }
+  }
+
+  if (t === 'K') {
+    for (const [dr,dc] of [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]) {
+      const r=row+dr, cc=col+dc;
+      if(r>=0&&r<8&&cc>=0&&cc<8&&(!b[r][cc]||b[r][cc].c!==c))
+        moves.push({row:r,col:cc,type:b[r][cc]?'capture':'move'});
+    }
+    // Castling
+    if (castling) {
+      const cs = castling[c];
+      const backRank = c==='white'?7:0;
+      if (row===backRank && col===4) {
+        // King side
+        if (cs.kSide && !b[backRank][5] && !b[backRank][6] &&
+            b[backRank][7]?.t==='R' && b[backRank][7]?.c===c &&
+            !isSquareAttacked(b,backRank,4,c==='white'?'black':'white') &&
+            !isSquareAttacked(b,backRank,5,c==='white'?'black':'white') &&
+            !isSquareAttacked(b,backRank,6,c==='white'?'black':'white'))
+          moves.push({row:backRank,col:6,type:'castle-k'});
+        // Queen side
+        if (cs.qSide && !b[backRank][3] && !b[backRank][2] && !b[backRank][1] &&
+            b[backRank][0]?.t==='R' && b[backRank][0]?.c===c &&
+            !isSquareAttacked(b,backRank,4,c==='white'?'black':'white') &&
+            !isSquareAttacked(b,backRank,3,c==='white'?'black':'white') &&
+            !isSquareAttacked(b,backRank,2,c==='white'?'black':'white'))
+          moves.push({row:backRank,col:2,type:'castle-q'});
+      }
+    }
+  }
+  return moves;
+}
+
+function isSquareAttacked(b, row, col, byColor) {
+  for (let r=0;r<8;r++) for (let cc=0;cc<8;cc++) {
+    if (b[r][cc]?.c===byColor) {
+      const moves = getPieceMoves(b,r,cc,null,null);
+      if (moves.some(m=>m.row===row&&m.col===col)) return true;
+    }
+  }
+  return false;
+}
+
+function findKing(b, color) {
+  for (let r=0;r<8;r++) for (let c=0;c<8;c++) if(b[r][c]?.t==='K'&&b[r][c]?.c===color) return {row:r,col:c};
+  return null;
+}
+
+function isInCheck(b, color) {
+  const k = findKing(b, color);
+  if (!k) return false;
+  return isSquareAttacked(b, k.row, k.col, color==='white'?'black':'white');
+}
+
+function getLegalMoves(b, row, col, ep, castling) {
+  const piece = b[row][col];
+  if (!piece) return [];
+  const pseudoMoves = getPieceMoves(b, row, col, ep, castling);
+  const legal = [];
+  for (const m of pseudoMoves) {
+    const nb = deepCopyBoard(b);
+    applyMoveToBoard(nb, row, col, m, ep);
+    if (!isInCheck(nb, piece.c)) legal.push(m);
+  }
+  return legal;
+}
+
+function applyMoveToBoard(b, fromRow, fromCol, move, ep) {
+  const piece = b[fromRow][fromCol];
+  b[move.row][move.col] = piece;
+  b[fromRow][fromCol] = null;
+  if (move.type === 'enpassant') b[fromRow][move.col] = null;
+  if (move.type === 'castle-k') {
+    b[move.row][5] = b[move.row][7];
+    b[move.row][7] = null;
+  }
+  if (move.type === 'castle-q') {
+    b[move.row][3] = b[move.row][0];
+    b[move.row][0] = null;
+  }
+}
+
+function hasAnyLegalMove(b, color, ep, castling) {
+  for (let r=0;r<8;r++) for (let c=0;c<8;c++) {
+    if (b[r][c]?.c===color && getLegalMoves(b,r,c,ep,castling).length>0) return true;
+  }
+  return false;
+}
+
+function moveToAlgebraic(b, fromRow, fromCol, move) {
+  const piece = b[fromRow][fromCol];
+  const types = {K:'K',Q:'Q',R:'R',B:'B',N:'N',P:''};
+  const prefix = types[piece.t];
+  const capture = (move.type==='capture'||move.type==='enpassant') ? 'x' : '';
+  const pawnFile = (piece.t==='P'&&capture) ? FILES[fromCol] : '';
+  const dest = FILES[move.col] + (8-move.row);
+  return pawnFile + prefix + capture + dest;
+}
+
+// ============================================================
+// RENDERING
+// ============================================================
+function renderBoard() {
+  const boardEl = document.getElementById('board');
+  boardEl.innerHTML = '';
+
+  for (let r=0; r<8; r++) {
+    for (let c=0; c<8; c++) {
+      const sq = document.createElement('div');
+      sq.className = 'sq ' + ((r+c)%2===0?'light':'dark');
+      sq.dataset.row = r;
+      sq.dataset.col = c;
+
+      // Highlights
+      if (selected && selected.row===r && selected.col===c) sq.classList.add('selected');
+      if (lastMove && ((lastMove.fromRow===r&&lastMove.fromCol===c)||(lastMove.toRow===r&&lastMove.toCol===c))) sq.classList.add('last-move');
+
+      const vm = validMoves.find(m=>m.row===r&&m.col===c);
+      if (vm) sq.classList.add(vm.type==='capture'||vm.type==='enpassant' ? 'valid-capture' : 'valid-move');
+
+      // Check highlight
+      if (!gameOver && isInCheck(board, turn)) {
+        const k = findKing(board, turn);
+        if (k && k.row===r && k.col===c) sq.classList.add('in-check');
+      }
+
+      // Piece
+      const piece = board[r][c];
+      if (piece) {
+        const theme = THEMES[currentTheme];
+        const sideTheme = theme[piece.c];
+        const pieceDef = sideTheme[piece.t];
+        const pieceEl = document.createElement('div');
+        pieceEl.className = 'piece';
+        pieceEl.innerHTML = pieceDef.svg(piece.c);
+        sq.appendChild(pieceEl);
+      }
+
+      sq.addEventListener('click', handleSquareClick);
+      boardEl.appendChild(sq);
+    }
+  }
+  updateStatus();
+  updateLegend();
+}
+
+function updateStatus() {
+  const el = document.getElementById('statusBar');
+  const theme = THEMES[currentTheme];
+  const side = theme[turn];
+  const oppColor = turn==='white'?'black':'white';
+
+  if (gameOver) {
+    el.className = 'status-bar checkmate';
+    return;
+  }
+
+  const inCheck = isInCheck(board, turn);
+  const hasMove = hasAnyLegalMove(board, turn, enPassantTarget, castlingRights);
+
+  if (!hasMove) {
+    gameOver = true;
+    if (inCheck) {
+      const winner = THEMES[currentTheme][oppColor];
+      el.textContent = `♟ CHECKMATE! ${winner.label} Wins! 🎉`;
+      el.className = 'status-bar checkmate';
+    } else {
+      el.textContent = '🤝 Stalemate! Draw!';
+      el.className = 'status-bar check';
+    }
+    return;
+  }
+
+  if (inCheck) {
+    el.textContent = `⚠ CHECK! Giliran ${side.label} (${turn==='white'?'Putih':'Hitam'})`;
+    el.className = 'status-bar check';
+  } else {
+    el.textContent = `Giliran ${side.label} (${turn==='white'?'Player 1':'Player 2'})`;
+    el.className = 'status-bar';
+  }
+}
+
+function updateLegend() {
+  const el = document.getElementById('legend');
+  const theme = THEMES[currentTheme];
+  let html = '';
+  for (const color of ['white','black']) {
+    const side = theme[color];
+    const label = color==='white' ? '⬜ Player 1' : '⬛ Player 2';
+    html += `<div class="legend-side">
+      <div class="legend-title">${label} — ${side.label}</div>`;
+    for (const [type, names] of [['K','King'],['Q','Queen'],['B','Bishop'],['R','Rook'],['N','Knight'],['P','Pawn']]) {
+      const pDef = side[type];
+      html += `<div class="legend-row">
+        <div class="legend-icon">${pDef.svg(color)}</div>
+        <span>${names}: ${pDef.name}</span>
+      </div>`;
+    }
+    html += '</div>';
+  }
+  el.innerHTML = html;
+}
+
+// ============================================================
+// INTERACTION
+// ============================================================
+function handleSquareClick(e) {
+  if (gameOver) return;
+  const sq = e.currentTarget;
+  const row = parseInt(sq.dataset.row);
+  const col = parseInt(sq.dataset.col);
+  const piece = board[row][col];
+
+  if (selected) {
+    const move = validMoves.find(m=>m.row===row&&m.col===col);
+    if (move) {
+      executeMove(selected.row, selected.col, move);
+      selected = null;
+      validMoves = [];
+    } else if (piece && piece.c === turn) {
+      selected = {row, col};
+      validMoves = getLegalMoves(board, row, col, enPassantTarget, castlingRights);
+    } else {
+      selected = null;
+      validMoves = [];
+    }
+  } else {
+    if (piece && piece.c === turn) {
+      selected = {row, col};
+      validMoves = getLegalMoves(board, row, col, enPassantTarget, castlingRights);
+    }
+  }
+  renderBoard();
+}
+
+function executeMove(fromRow, fromCol, move) {
+  const piece = board[fromRow][fromCol];
+  const captured = board[move.row][move.col];
+
+  // Record for history
+  const alg = moveToAlgebraic(board, fromRow, fromCol, move);
+  moveHistory.push({
+    fromRow, fromCol, move,
+    board: deepCopyBoard(board),
+    ep: enPassantTarget ? {...enPassantTarget} : null,
+    castling: JSON.parse(JSON.stringify(castlingRights)),
+    turn
+  });
+  lastMove = {fromRow, fromCol, toRow:move.row, toCol:move.col};
+
+  // Update move log
+  if (turn === 'white') {
+    document.getElementById('moveLog').textContent = `Langkah terakhir: ${alg}`;
+  } else {
+    document.getElementById('moveLog').textContent = `Langkah terakhir: ... ${alg}`;
+  }
+
+  // Apply move
+  applyMoveToBoard(board, fromRow, fromCol, move, enPassantTarget);
+
+  // Update castling rights
+  if (piece.t === 'K') { castlingRights[turn].kSide = false; castlingRights[turn].qSide = false; }
+  if (piece.t === 'R' && fromCol === 7) castlingRights[turn].kSide = false;
+  if (piece.t === 'R' && fromCol === 0) castlingRights[turn].qSide = false;
+
+  // En passant target
+  enPassantTarget = (move.type==='double') ? {row: fromRow + (turn==='white'?-1:1), col: fromCol} : null;
+
+  // Pawn promotion
+  if (piece.t === 'P' && (move.row === 0 || move.row === 7)) {
+    showPromotion(move.row, move.col, turn);
+    return; // don't switch turn yet
+  }
+
+  turn = turn === 'white' ? 'black' : 'white';
+  renderBoard();
+}
+
+// Pawn Promotion
+let promotionTarget = null;
+function showPromotion(row, col, color) {
+  promotionTarget = {row, col, color};
+  const modal = document.getElementById('promoModal');
+  const container = document.getElementById('promoPieces');
+  const theme = THEMES[currentTheme][color];
+  container.innerHTML = '';
+  for (const t of ['Q','R','B','N']) {
+    const div = document.createElement('div');
+    div.className = 'promo-piece';
+    div.innerHTML = theme[t].svg(color);
+    div.title = theme[t].name;
+    div.onclick = () => {
+      board[row][col] = {c:color, t};
+      modal.classList.remove('show');
+      turn = color === 'white' ? 'black' : 'white';
+      renderBoard();
+    };
+    container.appendChild(div);
+  }
+  modal.classList.add('show');
+}
+
+function undoMove() {
+  if (moveHistory.length === 0) return;
+  const last = moveHistory.pop();
+  board = last.board;
+  enPassantTarget = last.ep;
+  castlingRights = last.castling;
+  turn = last.turn;
+  selected = null;
+  validMoves = [];
+  lastMove = null;
+  gameOver = false;
+  document.getElementById('moveLog').textContent = '';
+  renderBoard();
+}
+
+function newGame() {
+  initBoard();
+  turn = 'white';
+  selected = null;
+  validMoves = [];
+  gameOver = false;
+  enPassantTarget = null;
+  castlingRights = { white: { kSide: true, qSide: true }, black: { kSide: true, qSide: true } };
+  moveHistory = [];
+  lastMove = null;
+  document.getElementById('moveLog').textContent = '';
+  document.getElementById('promoModal').classList.remove('show');
+  renderBoard();
+}
+
+function setTheme(t) {
+  currentTheme = t;
+  document.getElementById('btnFF').classList.toggle('active', t==='ff');
+  document.getElementById('btnMonster').classList.toggle('active', t==='monster');
+  newGame();
+}
+
+// ============================================================
+// TREES DECORATION
+// ============================================================
+function makePineTree(size=1, variant=0) {
+  const h = Math.round(20*size), w = Math.round(14*size);
+  const colors = ['#2d6a2d','#388e3c','#1b5e20','#43a047','#2e7d32'];
+  const col = colors[variant % colors.length];
+  const col2 = colors[(variant+2) % colors.length];
+  return `<svg width="${w}" height="${h}" viewBox="0 0 14 20" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="7,1 1,9 13,9" fill="${col}"/>
+    <polygon points="7,5 0,13 14,13" fill="${col2}"/>
+    <polygon points="7,9 1,17 13,17" fill="${col}"/>
+    <rect x="5" y="17" width="4" height="3" rx="1" fill="#5d4037"/>
+  </svg>`;
+}
+
+function setupTrees() {
+  const variants = [0,1,2,3,4,0,1,2,3,4];
+  const sizes = [0.9,1.1,0.8,1.0,1.2,0.95,1.05,0.85,1.1,0.9];
+  ['treesTop','treesBottom'].forEach(id => {
+    const el = document.getElementById(id);
+    el.innerHTML = variants.map((v,i) => makePineTree(sizes[i], v)).join('');
+  });
+  ['treesLeft','treesRight'].forEach(id => {
+    const el = document.getElementById(id);
+    el.innerHTML = variants.map((v,i) => makePineTree(sizes[i], v)).join('');
+  });
+}
+
+function setupCoords() {
+  const fileEl = document.getElementById('coordsFile');
+  const rankEl = document.getElementById('coordsRank');
+  fileEl.innerHTML = FILES.map(f=>`<div class="coord">${f}</div>`).join('');
+  rankEl.innerHTML = Array.from({length:8},(_,i)=>`<div class="coord">${8-i}</div>`).join('');
+}
+
+// ============================================================
+// INIT
+// ============================================================
+setupTrees();
+setupCoords();
+initBoard();
+renderBoard();
+</script>
+</body>
+</html>
