@@ -187,6 +187,51 @@
   }
   .sq.selected .piece { transform: scale(1.1); }
 
+  /* Photo pieces */
+  .piece-photo-wrap {
+    width: 90%;
+    height: 90%;
+    position: relative;
+    user-select: none;
+    pointer-events: none;
+    transition: transform 0.15s;
+  }
+  .sq.selected .piece-photo-wrap { transform: scale(1.1); }
+  .piece-photo-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+    border-radius: 50%;
+    display: block;
+  }
+  .piece-photo-wrap.white img {
+    border: 3px solid #f5d87a;
+    box-shadow: 0 0 8px #f5d87a88, 0 2px 6px rgba(0,0,0,0.7);
+  }
+  .piece-photo-wrap.black img {
+    border: 3px solid #bb66ff;
+    box-shadow: 0 0 8px #bb66ff88, 0 2px 6px rgba(0,0,0,0.7);
+  }
+  .piece-type-badge {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 700;
+    font-family: 'Cinzel', serif;
+    border: 1.5px solid rgba(0,0,0,0.5);
+    z-index: 2;
+  }
+  .piece-photo-wrap.white .piece-type-badge { background: #f5d87a; color: #333; }
+  .piece-photo-wrap.black .piece-type-badge { background: #bb66ff; color: #fff; }
+
   /* Capture animation */
   @keyframes captureFlash {
     0% { opacity: 1; transform: scale(1); }
@@ -1069,25 +1114,71 @@ function ultimeciaQueen(color) {
 // ============================================================
 // PIECE REGISTRY
 // ============================================================
+
+// Wiki image URLs for FF characters
+const FF_IMGS = {
+  // FF7 (White/Player 1) — FFVII Remake/Rebirth renders
+  cloud:   'https://static.wikia.nocookie.net/finalfantasy/images/5/5b/Cloud_Strife_from_FFVII_Remake_promo_render.png/revision/latest?cb=20190910180154',
+  tifa:    'https://static.wikia.nocookie.net/finalfantasy/images/2/21/Tifa_Lockhart_from_FFVII_Rebirth_promo_render.png/revision/latest?cb=20240304073043',
+  aerith:  'https://static.wikia.nocookie.net/finalfantasy/images/1/1f/Aerith_Gainsborough_from_FFVII_Rebirth_promo_render.png/revision/latest?cb=20240304072103',
+  barret:  'https://static.wikia.nocookie.net/finalfantasy/images/f/f8/Barret_Wallace_from_FFVII_Rebirth_promo_render.png/revision/latest?cb=20240304072723',
+  redxiii: 'https://static.wikia.nocookie.net/finalfantasy/images/6/69/Red_XIII_from_FFVII_Rebirth_promo_render.png/revision/latest?cb=20230916081819',
+  // FF8 (Black/Player 2)
+  squall:  'https://static.wikia.nocookie.net/finalfantasy/images/e/e7/Squall_Civilian_outfit_from_FFVIII_Remaster_battle_render.png/revision/latest?cb=20250731003131',
+  rinoa:   'https://static.wikia.nocookie.net/finalfantasy/images/0/09/Ff8-rinoa.jpg/revision/latest?cb=20100603174143',
+  quistis: 'https://static.wikia.nocookie.net/finalfantasy/images/c/c6/Quistis-ffviii-battle.png/revision/latest?cb=20130319185353',
+  zell:    'https://static.wikia.nocookie.net/finalfantasy/images/7/75/Ff8-zell.jpg/revision/latest?cb=20100603174414',
+  irvine:  'https://static.wikia.nocookie.net/finalfantasy/images/1/18/Ff8-irvine.jpg/revision/latest?cb=20100603174532',
+};
+
+// Helper: render a photo piece (img) or SVG fallback
+function renderPieceEl(pieceDef, color) {
+  if (pieceDef.img) {
+    const wrap = document.createElement('div');
+    wrap.className = `piece-photo-wrap ${color}`;
+    const img = document.createElement('img');
+    img.src = pieceDef.img;
+    img.alt = pieceDef.name;
+    img.crossOrigin = 'anonymous';
+    // On error, fallback to SVG
+    if (pieceDef.svgFallback) {
+      img.onerror = () => { wrap.innerHTML = pieceDef.svgFallback(color); wrap.className = 'piece'; };
+    }
+    wrap.appendChild(img);
+    if (pieceDef.badge) {
+      const badge = document.createElement('div');
+      badge.className = 'piece-type-badge';
+      badge.textContent = pieceDef.badge;
+      wrap.appendChild(badge);
+    }
+    return wrap;
+  } else {
+    const div = document.createElement('div');
+    div.className = 'piece';
+    div.innerHTML = pieceDef.svg(color);
+    return div;
+  }
+}
+
 const THEMES = {
   ff: {
     name: 'FF7 vs FF8',
     white: {
       label: 'FF7',
-      K: { name: 'Cloud',  svg: (c) => cloudKing(c) },
-      Q: { name: 'Tifa',   svg: (c) => tifaQueen(c) },
-      B: { name: 'Aerith', svg: (c) => aerithBishop(c) },
-      R: { name: 'Barret', svg: (c) => barretRook(c) },
-      N: { name: 'RedXIII',svg: (c) => redKnight(c) },
-      P: { name: 'SOLDIER',svg: (c) => soldierPawn(c) },
+      K: { name: 'Cloud',   img: FF_IMGS.cloud,   badge: '♔', svgFallback: cloudKing },
+      Q: { name: 'Tifa',    img: FF_IMGS.tifa,    badge: '♕', svgFallback: tifaQueen },
+      B: { name: 'Aerith',  img: FF_IMGS.aerith,  badge: '♗', svgFallback: aerithBishop },
+      R: { name: 'Barret',  img: FF_IMGS.barret,  badge: '♖', svgFallback: barretRook },
+      N: { name: 'RedXIII', img: FF_IMGS.redxiii, badge: '♘', svgFallback: redKnight },
+      P: { name: 'SOLDIER', svg: (c) => soldierPawn(c) },
     },
     black: {
       label: 'FF8',
-      K: { name: 'Squall',  svg: (c) => squallKing(c) },
-      Q: { name: 'Rinoa',   svg: (c) => rinoaQueen(c) },
-      B: { name: 'Quistis', svg: (c) => quistisBishop(c) },
-      R: { name: 'Zell',    svg: (c) => zellRook(c) },
-      N: { name: 'Irvine',  svg: (c) => irvineKnight(c) },
+      K: { name: 'Squall',  img: FF_IMGS.squall,  badge: '♚', svgFallback: squallKing },
+      Q: { name: 'Rinoa',   img: FF_IMGS.rinoa,   badge: '♛', svgFallback: rinoaQueen },
+      B: { name: 'Quistis', img: FF_IMGS.quistis, badge: '♝', svgFallback: quistisBishop },
+      R: { name: 'Zell',    img: FF_IMGS.zell,    badge: '♜', svgFallback: zellRook },
+      N: { name: 'Irvine',  img: FF_IMGS.irvine,  badge: '♞', svgFallback: irvineKnight },
       P: { name: 'SeeD',    svg: (c) => seedPawn(c) },
     }
   },
@@ -1329,9 +1420,7 @@ function renderBoard() {
         const theme = THEMES[currentTheme];
         const sideTheme = theme[piece.c];
         const pieceDef = sideTheme[piece.t];
-        const pieceEl = document.createElement('div');
-        pieceEl.className = 'piece';
-        pieceEl.innerHTML = pieceDef.svg(piece.c);
+        const pieceEl = renderPieceEl(pieceDef, piece.c);
         sq.appendChild(pieceEl);
       }
 
@@ -1382,22 +1471,29 @@ function updateStatus() {
 function updateLegend() {
   const el = document.getElementById('legend');
   const theme = THEMES[currentTheme];
-  let html = '';
+  el.innerHTML = '';
   for (const color of ['white','black']) {
     const side = theme[color];
     const label = color==='white' ? '⬜ Player 1' : '⬛ Player 2';
-    html += `<div class="legend-side">
-      <div class="legend-title">${label} — ${side.label}</div>`;
-    for (const [type, names] of [['K','King'],['Q','Queen'],['B','Bishop'],['R','Rook'],['N','Knight'],['P','Pawn']]) {
+    const wrap = document.createElement('div');
+    wrap.className = 'legend-side';
+    wrap.innerHTML = `<div class="legend-title">${label} — ${side.label}</div>`;
+    for (const [type, typeName] of [['K','King'],['Q','Queen'],['B','Bishop'],['R','Rook'],['N','Knight'],['P','Pawn']]) {
       const pDef = side[type];
-      html += `<div class="legend-row">
-        <div class="legend-icon">${pDef.svg(color)}</div>
-        <span>${names}: ${pDef.name}</span>
-      </div>`;
+      const row = document.createElement('div');
+      row.className = 'legend-row';
+      const iconWrap = document.createElement('div');
+      iconWrap.className = 'legend-icon';
+      const pieceEl = renderPieceEl(pDef, color);
+      iconWrap.appendChild(pieceEl);
+      const span = document.createElement('span');
+      span.textContent = `${typeName}: ${pDef.name}`;
+      row.appendChild(iconWrap);
+      row.appendChild(span);
+      wrap.appendChild(row);
     }
-    html += '</div>';
+    el.appendChild(wrap);
   }
-  el.innerHTML = html;
 }
 
 // ============================================================
@@ -1486,8 +1582,9 @@ function showPromotion(row, col, color) {
   for (const t of ['Q','R','B','N']) {
     const div = document.createElement('div');
     div.className = 'promo-piece';
-    div.innerHTML = theme[t].svg(color);
     div.title = theme[t].name;
+    const pieceEl = renderPieceEl(theme[t], color);
+    div.appendChild(pieceEl);
     div.onclick = () => {
       board[row][col] = {c:color, t};
       modal.classList.remove('show');
