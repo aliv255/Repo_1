@@ -35,10 +35,11 @@ function newGame() {
   enPassantTarget = null;
   castlingRights = { white: { K: true, Q: true }, black: { K: true, Q: true } };
   gameOver = false;
+  moveLogEntries = [];
 
   renderBoard();
   updateStatus();
-  document.getElementById('moveLog').textContent = '';
+  renderMoveLog();
 }
 
 // ─── Render Board ─────────────────────────────────────────────────────────────
@@ -135,7 +136,7 @@ function executeMove(fr, fc, tr, tc, special) {
   });
 
   const piece = board[fr][fc];
-  const newEP = null;
+  const wasCapture = !!(board[tr][tc]) || special === 'ep';
 
   // En passant capture
   if (special === 'ep') {
@@ -184,18 +185,51 @@ function executeMove(fr, fc, tr, tc, special) {
     return;
   }
 
-  finishTurn(fr, fc, tr, tc, piece);
+  finishTurn(fr, fc, tr, tc, piece, wasCapture);
 }
 
-function finishTurn(fr, fc, tr, tc, piece) {
-  turn = turn === 'white' ? 'black' : 'white';
+let moveLogEntries = []; // [{white: 'e4', black: 'd5'}, ...]
 
-  const moveStr = `${piece.color[0].toUpperCase()} ${piece.type}${String.fromCharCode(97+fc)}${8-fr}→${String.fromCharCode(97+tc)}${8-tr}`;
-  const log = document.getElementById('moveLog');
-  log.textContent = (log.textContent ? log.textContent + '  ' : '') + moveStr;
+function finishTurn(fr, fc, tr, tc, piece, wasCapture) {
+  // Build algebraic notation
+  const file = String.fromCharCode(97 + tc);
+  const rank = 8 - tr;
+  const fromFile = String.fromCharCode(97 + fc);
+  let notation = '';
+  if (piece.type === 'P') {
+    notation = (fc !== tc ? fromFile + 'x' : '') + file + rank;
+  } else {
+    const cap = wasCapture ? 'x' : '';
+    notation = piece.type + cap + file + rank;
+  }
 
+  // Switch turn first so check detection is correct
+  turn = piece.color === 'white' ? 'black' : 'white';
+
+  if (isCheckmate(turn)) notation += '#';
+  else if (isInCheck(turn)) notation += '+';
+
+  // Add to log
+  if (piece.color === 'white') {
+    moveLogEntries.push({ white: notation, black: '' });
+  } else {
+    if (moveLogEntries.length > 0) moveLogEntries[moveLogEntries.length-1].black = notation;
+    else moveLogEntries.push({ white: '…', black: notation });
+  }
+  renderMoveLog();
   renderBoard();
   updateStatus();
+}
+
+function renderMoveLog() {
+  const log = document.getElementById('moveLog');
+  const last5 = moveLogEntries.slice(-5);
+  log.innerHTML = last5.map((entry, i) => {
+    const num = moveLogEntries.length - last5.length + i + 1;
+    return `<span style="color:#f5d87a88">${num}.</span> `
+      + `<span style="color:#f5e0a0">${entry.white}</span> `
+      + `<span style="color:#cc99ff">${entry.black}</span>`;
+  }).join('  ');
 }
 
 // ─── Promotion Modal ──────────────────────────────────────────────────────────
@@ -214,7 +248,8 @@ function showPromoModal(r, c, color) {
     btn.addEventListener('click', () => {
       board[r][c] = {type, color};
       modal.classList.remove('show');
-      turn = turn === 'white' ? 'black' : 'white';
+      turn = color === 'white' ? 'black' : 'white';
+      renderMoveLog();
       renderBoard();
       updateStatus();
     });
@@ -266,8 +301,15 @@ function undoMove() {
   gameOver = false;
   selected = null;
   validMoves = [];
+  // Trim move log
+  if (turn === 'white' && moveLogEntries.length > 0) {
+    moveLogEntries.pop();
+  } else if (turn === 'black' && moveLogEntries.length > 0) {
+    moveLogEntries[moveLogEntries.length-1].black = '';
+  }
   renderBoard();
   updateStatus();
+  renderMoveLog();
 }
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
@@ -293,10 +335,55 @@ function isSquareAttacked(r, c, byColor) {
     for (let fc = 0; fc < 8; fc++) {
       const p = board[fr][fc];
       if (!p || p.color !== byColor) continue;
-      if (getRawMoves(fr, fc, p).some(m => m.r === r && m.c === c))
+      if (getAttackSquares(fr, fc, p).some(m => m.r === r && m.c === c))
         return true;
     }
   return false;
+}
+
+// Attack squares: squares a piece *threatens*, ignoring whether a capture is possible
+// (used for check detection — pawn attacks diagonals regardless of piece presence)
+function getAttackSquares(r, c, piece) {
+  const {type, color} = piece;
+  const opp = color === 'white' ? 'black' : 'white';
+  const moves = [];
+
+  const push = (tr, tc) => {
+    if (tr >= 0 && tr < 8 && tc >= 0 && tc < 8) moves.push({r: tr, c: tc});
+  };
+
+  const slide = (dr, dc) => {
+    let tr = r+dr, tc = c+dc;
+    while (tr >= 0 && tr < 8 && tc >= 0 && tc < 8) {
+      push(tr, tc);
+      if (board[tr][tc]) break; // blocked after this square
+      tr += dr; tc += dc;
+    }
+  };
+
+  if (type === 'P') {
+    const dir = color === 'white' ? -1 : 1;
+    // Pawns attack the two diagonal squares regardless of what's there
+    push(r+dir, c-1);
+    push(r+dir, c+1);
+    return moves;
+  }
+
+  if (type === 'N') {
+    [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]]
+      .forEach(([dr,dc]) => push(r+dr, c+dc));
+    return moves;
+  }
+
+  if (type === 'B' || type === 'Q') [[-1,-1],[-1,1],[1,-1],[1,1]].forEach(([dr,dc]) => slide(dr,dc));
+  if (type === 'R' || type === 'Q') [[-1,0],[1,0],[0,-1],[0,1]].forEach(([dr,dc]) => slide(dr,dc));
+
+  if (type === 'K') {
+    [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]
+      .forEach(([dr,dc]) => push(r+dr, c+dc));
+  }
+
+  return moves;
 }
 
 function isInCheck(color) {
