@@ -448,22 +448,35 @@ function hasAnyLegal(color) {
 
 // ─── Decorative Trees ─────────────────────────────────────────────────────────
 function setupTrees() {
-  const treeSVG = (size=22) => {
-    const s = size;
-    return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <polygon points="12,2 3,18 21,18" fill="#2d7a2d" stroke="#1a4a1a" stroke-width="1"/>
-      <polygon points="12,6 4,20 20,20" fill="#3a9a3a" stroke="#1a4a1a" stroke-width="1"/>
-      <rect x="10" y="18" width="4" height="5" fill="#8B4513"/>
-    </svg>`;
-  };
+  // Three variants for visual variety
+  const treeVariants = [
+    (s) => `<svg width="${s}" height="${s}" viewBox="0 0 24 28" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="12,2 2,14 22,14" fill="#2a7a2a" stroke="#164a16" stroke-width="0.8"/>
+      <polygon points="12,8 3,20 21,20" fill="#369936" stroke="#164a16" stroke-width="0.8"/>
+      <polygon points="12,13 4,24 20,24" fill="#3aaa3a" stroke="#164a16" stroke-width="0.8"/>
+      <rect x="10.5" y="23" width="3" height="5" fill="#7a3e10"/>
+    </svg>`,
+    (s) => `<svg width="${s}" height="${s}" viewBox="0 0 24 28" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="12,1 4,13 20,13" fill="#1e6b1e" stroke="#0f3a0f" stroke-width="0.8"/>
+      <polygon points="12,7 3,19 21,19" fill="#2d8a2d" stroke="#0f3a0f" stroke-width="0.8"/>
+      <polygon points="12,13 4,25 20,25" fill="#349934" stroke="#0f3a0f" stroke-width="0.8"/>
+      <rect x="11" y="24" width="2.5" height="4" fill="#8B4513"/>
+      <circle cx="12" cy="1" r="1.5" fill="#f5d87a" opacity="0.6"/>
+    </svg>`,
+    (s) => `<svg width="${s}" height="${s}" viewBox="0 0 24 28" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="12,3 3,15 21,15" fill="#338833" stroke="#1a4a1a" stroke-width="0.8"/>
+      <polygon points="12,9 2,22 22,22" fill="#44aa44" stroke="#1a4a1a" stroke-width="0.8"/>
+      <rect x="10.5" y="21" width="3" height="6" fill="#6b3510"/>
+    </svg>`,
+  ];
 
   ['treesTop','treesBottom'].forEach(id => {
     const el = document.getElementById(id);
-    el.innerHTML = Array.from({length:10}, () => treeSVG(20)).join('');
+    el.innerHTML = Array.from({length:10}, (_, i) => treeVariants[i % 3](22)).join('');
   });
   ['treesLeft','treesRight'].forEach(id => {
     const el = document.getElementById(id);
-    el.innerHTML = Array.from({length:10}, () => treeSVG(20)).join('');
+    el.innerHTML = Array.from({length:10}, (_, i) => treeVariants[i % 3](22)).join('');
   });
 }
 
