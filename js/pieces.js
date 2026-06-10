@@ -170,8 +170,215 @@ function pawnSVG(color) {
   }
 }
 
+// ─── Monster SVG Pieces ──────────────────────────────────────────────────────
+
+function svgMonster(content, color) {
+  const base = color === 'white' ? '#a8d8f0' : '#3a0a5a';
+  const stroke = color === 'white' ? '#2266aa' : '#cc44ff';
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+    <defs>
+      <radialGradient id="mg${color}" cx="50%" cy="40%" r="55%">
+        <stop offset="0%" stop-color="${color==='white'?'#d0f0ff':'#6a0aaa'}"/>
+        <stop offset="100%" stop-color="${base}"/>
+      </radialGradient>
+      <filter id="mgl"><feGaussianBlur stdDeviation="1.5" result="b"/>
+        <feComposite in="SourceGraphic" in2="b" operator="over"/></filter>
+    </defs>
+    <g fill="url(#mg${color})" stroke="${stroke}" stroke-width="1.8" filter="url(#mgl)">${content}</g>
+  </svg>`;
+}
+
+// King white = Bahamut (dragon head + wings)
+function bahamutSVG(color) {
+  const wing = color === 'white'
+    ? 'M50,30 Q20,10 10,30 Q20,38 38,35' // left wing
+    : 'M50,30 Q80,10 90,30 Q80,38 62,35'; // right wing (Neo Bahamut mirror)
+  const c = color === 'white' ? '#88ccff' : '#ee88ff';
+  return svgMonster(`
+    <!-- Wings -->
+    <path d="M50,30 Q20,8 8,28 Q20,40 40,34" fill="${c}" opacity="0.8"/>
+    <path d="M50,30 Q80,8 92,28 Q80,40 60,34" fill="${c}" opacity="0.8"/>
+    <!-- Body -->
+    <ellipse cx="50" cy="52" rx="18" ry="24"/>
+    <!-- Head -->
+    <ellipse cx="50" cy="28" rx="12" ry="14"/>
+    <!-- Horns -->
+    <polygon points="44,14 40,2 48,16" fill="${c}"/>
+    <polygon points="56,14 60,2 52,16" fill="${c}"/>
+    <!-- Eyes -->
+    <circle cx="45" cy="26" r="3" fill="${c}" stroke-width="1"/>
+    <circle cx="55" cy="26" r="3" fill="${c}" stroke-width="1"/>
+    <!-- Base -->
+    <rect x="32" y="74" width="36" height="10" rx="5"/>
+  `, color);
+}
+
+// Queen white = Shiva (icy elegant), black = Ultimecia (dark sorceress)
+function shivaSVG(color) {
+  const c = color === 'white' ? '#aaeeff' : '#dd88ff';
+  const accent = color === 'white' ? '#66ccff' : '#aa00ff';
+  return svgMonster(`
+    <!-- Robe/body -->
+    <path d="M32,42 Q28,65 30,76 L70,76 Q72,65 68,42 Z"/>
+    <!-- Torso -->
+    <ellipse cx="50" cy="36" rx="14" ry="10"/>
+    <!-- Head -->
+    <circle cx="50" cy="22" r="12"/>
+    <!-- Ice crown / dark tiara -->
+    <polygon points="50,8 44,18 38,10 44,22 56,22 62,10 56,18" fill="${c}" stroke-width="1"/>
+    <!-- Crystal shards / horns -->
+    <polygon points="38,10 33,2 42,12" fill="${accent}"/>
+    <polygon points="62,10 67,2 58,12" fill="${accent}"/>
+    <!-- Eyes -->
+    <ellipse cx="45" cy="21" rx="3" ry="2.5" fill="${c}"/>
+    <ellipse cx="55" cy="21" rx="3" ry="2.5" fill="${c}"/>
+    <!-- Base -->
+    <rect x="28" y="76" width="44" height="11" rx="5"/>
+  `, color);
+}
+
+// Bishop white = Ifrit (fire horns), black = Diablos (bat wings)
+function ifritSVG(color) {
+  const c = color === 'white' ? '#ffaa44' : '#aa44cc';
+  return svgMonster(`
+    <!-- Body -->
+    <path d="M34,44 Q28,62 30,74 L70,74 Q72,62 66,44 Z"/>
+    <!-- Chest -->
+    <ellipse cx="50" cy="38" rx="16" ry="12"/>
+    <!-- Head -->
+    <circle cx="50" cy="23" r="13"/>
+    ${color === 'white' ? `
+    <!-- Ifrit horns (fire curved) -->
+    <path d="M38,14 Q30,2 36,8" fill="${c}" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M62,14 Q70,2 64,8" fill="${c}" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M44,12 Q40,4 44,8" fill="${c}" stroke-width="1"/>
+    <path d="M56,12 Q60,4 56,8" fill="${c}" stroke-width="1"/>
+    ` : `
+    <!-- Diablos bat wings -->
+    <path d="M36,30 Q15,15 12,28 Q20,40 36,36" fill="${c}" opacity="0.7"/>
+    <path d="M64,30 Q85,15 88,28 Q80,40 64,36" fill="${c}" opacity="0.7"/>
+    `}
+    <!-- Eyes glow -->
+    <circle cx="44" cy="22" r="3.5" fill="${c}"/>
+    <circle cx="56" cy="22" r="3.5" fill="${c}"/>
+    <!-- Base -->
+    <rect x="28" y="74" width="44" height="12" rx="5"/>
+  `, color);
+}
+
+// Rook white = Iron Giant (armored), black = Golem (stone)
+function ironGiantSVG(color) {
+  const c = color === 'white' ? '#ccddee' : '#887766';
+  return svgMonster(`
+    <!-- Legs -->
+    <rect x="33" y="66" width="14" height="18" rx="3"/>
+    <rect x="53" y="66" width="14" height="18" rx="3"/>
+    <!-- Body armor -->
+    <rect x="28" y="38" width="44" height="32" rx="4"/>
+    <!-- Shoulder pads -->
+    <rect x="18" y="38" width="16" height="10" rx="3" fill="${c}" opacity="0.8"/>
+    <rect x="66" y="38" width="16" height="10" rx="3" fill="${c}" opacity="0.8"/>
+    <!-- Head/helmet -->
+    <rect x="34" y="16" width="32" height="26" rx="5"/>
+    <!-- Visor slit -->
+    <rect x="38" y="28" width="24" height="6" rx="2" fill-opacity="0.25"/>
+    <!-- Rivets -->
+    <circle cx="36" cy="22" r="2.5" fill="${c}"/>
+    <circle cx="64" cy="22" r="2.5" fill="${c}"/>
+    <!-- Base -->
+    <rect x="26" y="82" width="48" height="10" rx="4"/>
+  `, color);
+}
+
+// Knight white = Chocobo (bird), black = Behemoth (beast)
+function chocoboSVG(color) {
+  if (color === 'white') {
+    return svgMonster(`
+      <!-- Chocobo body -->
+      <ellipse cx="50" cy="58" rx="20" ry="24"/>
+      <!-- Neck -->
+      <path d="M42,36 Q38,20 44,10 Q56,8 58,18 Q58,30 56,38"/>
+      <!-- Head -->
+      <ellipse cx="51" cy="14" rx="10" ry="10"/>
+      <!-- Beak -->
+      <polygon points="44,14 36,12 44,18" fill="#ffcc00" stroke="#cc8800" stroke-width="1"/>
+      <!-- Crest feathers -->
+      <path d="M50,4 Q44,0 46,6" fill="#ffdd44" stroke-width="1"/>
+      <path d="M54,5 Q52,0 52,7" fill="#ffdd44" stroke-width="1"/>
+      <!-- Eye -->
+      <circle cx="47" cy="13" r="3" fill="#ffee00" stroke-width="1"/>
+      <circle cx="47" cy="13" r="1.5" fill="#333" stroke-width="0"/>
+      <!-- Wing hint -->
+      <path d="M32,48 Q24,44 26,54 Q32,56 36,52" fill-opacity="0.6"/>
+      <!-- Legs -->
+      <line x1="42" y1="78" x2="38" y2="92" stroke-width="4" stroke-linecap="round"/>
+      <line x1="58" y1="78" x2="62" y2="92" stroke-width="4" stroke-linecap="round"/>
+    `, color);
+  } else {
+    // Behemoth — large horned beast
+    return svgMonster(`
+      <!-- Body -->
+      <ellipse cx="50" cy="58" rx="26" ry="22"/>
+      <!-- Head -->
+      <ellipse cx="50" cy="30" rx="18" ry="16"/>
+      <!-- Curved horns -->
+      <path d="M34,20 Q20,4 30,14" fill="none" stroke-width="5" stroke-linecap="round"/>
+      <path d="M66,20 Q80,4 70,14" fill="none" stroke-width="5" stroke-linecap="round"/>
+      <!-- Mane -->
+      <path d="M32,36 Q30,50 34,60" fill-opacity="0.4" stroke-width="3"/>
+      <!-- Eyes -->
+      <circle cx="42" cy="28" r="4" fill="#ff4444" stroke-width="1"/>
+      <circle cx="58" cy="28" r="4" fill="#ff4444" stroke-width="1"/>
+      <!-- Claws -->
+      <line x1="38" y1="78" x2="32" y2="90" stroke-width="4" stroke-linecap="round"/>
+      <line x1="50" y1="80" x2="50" y2="92" stroke-width="4" stroke-linecap="round"/>
+      <line x1="62" y1="78" x2="68" y2="90" stroke-width="4" stroke-linecap="round"/>
+    `, color);
+  }
+}
+
+// Pawn white = Moogle (pompom), black = Dark Moogle
+function moogleSVG(color) {
+  const pompom = color === 'white' ? '#ff6688' : '#aa00cc';
+  const c = color === 'white' ? '#ffffff' : '#553366';
+  return svgMonster(`
+    <!-- Pompom stem -->
+    <line x1="50" y1="10" x2="50" y2="20" stroke-width="2.5" stroke="${pompom}"/>
+    <!-- Pompom -->
+    <circle cx="50" cy="8" r="6" fill="${pompom}" stroke="${pompom}"/>
+    <!-- Head -->
+    <circle cx="50" cy="30" r="14" fill="${c}" stroke-width="1.8"/>
+    <!-- Ears -->
+    <ellipse cx="35" cy="22" rx="6" ry="10" fill="${c}" stroke-width="1.5"/>
+    <ellipse cx="65" cy="22" rx="6" ry="10" fill="${c}" stroke-width="1.5"/>
+    <!-- Eyes (beady) -->
+    <circle cx="44" cy="30" r="3" fill="#222" stroke-width="0"/>
+    <circle cx="56" cy="30" r="3" fill="#222" stroke-width="0"/>
+    <!-- Nose (red dot) -->
+    <circle cx="50" cy="36" r="2.5" fill="#ff4444" stroke-width="0"/>
+    <!-- Wings -->
+    <path d="M36,46 Q22,40 24,52 Q32,56 38,50" fill="${c}" opacity="0.7" stroke-width="1.5"/>
+    <path d="M64,46 Q78,40 76,52 Q68,56 62,50" fill="${c}" opacity="0.7" stroke-width="1.5"/>
+    <!-- Body -->
+    <ellipse cx="50" cy="62" rx="16" ry="18"/>
+    <!-- Base -->
+    <rect x="30" y="78" width="40" height="11" rx="5"/>
+  `, color);
+}
+
 // ─── Piece SVG Dispatcher ────────────────────────────────────────────────────
-function getPieceSVG(type, color) {
+function getPieceSVG(type, color, theme) {
+  if (theme === 'monster') {
+    switch(type) {
+      case 'K': return bahamutSVG(color);
+      case 'Q': return shivaSVG(color);
+      case 'B': return ifritSVG(color);
+      case 'R': return ironGiantSVG(color);
+      case 'N': return chocoboSVG(color);
+      case 'P': return moogleSVG(color);
+    }
+  }
+  // Default FF / generic SVG
   switch(type) {
     case 'K': return kingSVG(color);
     case 'Q': return queenSVG(color);
@@ -203,7 +410,7 @@ function renderPieceEl(type, color, theme) {
     // Fallback to SVG if image fails to load
     img.onerror = () => {
       wrap.className = 'piece';
-      wrap.innerHTML = getPieceSVG(type, color);
+      wrap.innerHTML = getPieceSVG(type, color, theme);
     };
 
     const badge = document.createElement('span');
@@ -215,10 +422,11 @@ function renderPieceEl(type, color, theme) {
     return wrap;
   }
 
-  // SVG piece
+  // SVG piece (monster theme or FF pawn/fallback)
   const div = document.createElement('div');
   div.className = 'piece';
-  div.innerHTML = getPieceSVG(type, color);
+  div.title = themeData.name; // tooltip for SVG pieces too
+  div.innerHTML = getPieceSVG(type, color, theme);
   return div;
 }
 

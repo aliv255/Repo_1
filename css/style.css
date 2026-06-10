@@ -189,10 +189,15 @@ h1 {
 .piece {
   width: 88%; height: 88%;
   user-select: none; pointer-events: none;
-  transition: transform 0.15s;
+  transition: transform 0.15s, filter 0.15s;
   filter: drop-shadow(1px 2px 3px rgba(0,0,0,0.5));
+  cursor: pointer;
 }
-.sq.selected .piece { transform: scale(1.1); }
+.sq:hover .piece { filter: drop-shadow(0 0 6px #ffffff99); }
+.sq.selected .piece {
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 10px #ffe000cc) drop-shadow(0 0 4px #fff);
+}
 
 /* ── Photo Pieces ── */
 .piece-photo-wrap {
