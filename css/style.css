@@ -199,31 +199,62 @@ h1 {
   width: 90%; height: 90%;
   position: relative;
   user-select: none; pointer-events: none;
-  transition: transform 0.15s;
+  transition: transform 0.15s, filter 0.15s;
 }
+.sq:hover .piece-photo-wrap { filter: brightness(1.1); }
 .sq.selected .piece-photo-wrap { transform: scale(1.1); }
+
 .piece-photo-wrap img {
   width: 100%; height: 100%;
   object-fit: cover; object-position: top center;
   border-radius: 50%; display: block;
+  transition: box-shadow 0.2s;
 }
 .piece-photo-wrap.white img {
   border: 3px solid #f5d87a;
-  box-shadow: 0 0 8px #f5d87a88, 0 2px 6px rgba(0,0,0,0.7);
+  box-shadow: 0 0 10px #f5d87aaa, 0 2px 8px rgba(0,0,0,0.8);
 }
 .piece-photo-wrap.black img {
   border: 3px solid #bb66ff;
-  box-shadow: 0 0 8px #bb66ff88, 0 2px 6px rgba(0,0,0,0.7);
+  box-shadow: 0 0 10px #bb66ffaa, 0 2px 8px rgba(0,0,0,0.8);
 }
+.sq.selected .piece-photo-wrap.white img {
+  box-shadow: 0 0 18px #f5d87a, 0 0 6px #ffe000;
+}
+.sq.selected .piece-photo-wrap.black img {
+  box-shadow: 0 0 18px #bb66ff, 0 0 6px #ee99ff;
+}
+
+/* Piece type badge */
 .piece-type-badge {
-  position: absolute; bottom: -2px; right: -2px;
-  width: 18px; height: 18px; border-radius: 50%;
+  position: absolute; bottom: -3px; right: -3px;
+  width: 20px; height: 20px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-size: 9px; font-weight: 700; font-family: 'Cinzel', serif;
-  border: 1.5px solid rgba(0,0,0,0.5); z-index: 2;
+  border: 2px solid rgba(0,0,0,0.6);
+  z-index: 2;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.6);
 }
-.piece-photo-wrap.white .piece-type-badge { background: #f5d87a; color: #333; }
-.piece-photo-wrap.black .piece-type-badge { background: #bb66ff; color: #fff; }
+.piece-photo-wrap.white .piece-type-badge { background: #f5d87a; color: #2a1a00; }
+.piece-photo-wrap.black .piece-type-badge { background: #9944cc; color: #fff; }
+
+/* Name tooltip on hover */
+.piece-photo-wrap::before {
+  content: attr(data-name);
+  position: absolute; bottom: 105%; left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.85);
+  color: #f5d87a;
+  font-family: 'Cinzel', serif;
+  font-size: 0.55rem; font-weight: 700;
+  padding: 3px 7px; border-radius: 4px;
+  white-space: nowrap; letter-spacing: 1px;
+  pointer-events: none; opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 10;
+  border: 1px solid #f5d87a44;
+}
+.sq:hover .piece-photo-wrap::before { opacity: 1; }
 
 /* ── Capture animation ── */
 @keyframes captureFlash {

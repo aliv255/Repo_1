@@ -17,24 +17,38 @@ const FF_IMGS = {
   irvine:  'imgs/irvine.jpg',
 };
 
+// Per-character face crop positions (object-position CSS value)
+const FACE_POS = {
+  cloud:   'center 8%',
+  tifa:    'center 5%',
+  aerith:  'center 5%',
+  barret:  'center 10%',
+  redxiii: 'center 15%',
+  squall:  'center 8%',
+  rinoa:   'center 8%',
+  quistis: 'center 5%',
+  zell:    'center 10%',
+  irvine:  'center 8%',
+};
+
 // ─── Theme Configuration ─────────────────────────────────────────────────────
 const THEMES = {
   ff: {
     white: {
-      K: { name:'Cloud',   img: FF_IMGS.cloud,   badge:'K' },
-      Q: { name:'Tifa',    img: FF_IMGS.tifa,    badge:'Q' },
-      B: { name:'Aerith',  img: FF_IMGS.aerith,  badge:'B' },
-      R: { name:'Barret',  img: FF_IMGS.barret,  badge:'R' },
-      N: { name:'Red XIII',img: FF_IMGS.redxiii, badge:'N' },
-      P: { name:'SOLDIER', img: null,            badge:'P' },
+      K: { name:'Cloud Strife',       img: FF_IMGS.cloud,   badge:'K', faceKey:'cloud'   },
+      Q: { name:'Tifa Lockhart',      img: FF_IMGS.tifa,    badge:'Q', faceKey:'tifa'    },
+      B: { name:'Aerith Gainsborough',img: FF_IMGS.aerith,  badge:'B', faceKey:'aerith'  },
+      R: { name:'Barret Wallace',     img: FF_IMGS.barret,  badge:'R', faceKey:'barret'  },
+      N: { name:'Red XIII',           img: FF_IMGS.redxiii, badge:'N', faceKey:'redxiii' },
+      P: { name:'SOLDIER',            img: null,            badge:'P', faceKey:null      },
     },
     black: {
-      K: { name:'Squall',  img: FF_IMGS.squall,  badge:'K' },
-      Q: { name:'Rinoa',   img: FF_IMGS.rinoa,   badge:'Q' },
-      B: { name:'Quistis', img: FF_IMGS.quistis, badge:'B' },
-      R: { name:'Zell',    img: FF_IMGS.zell,    badge:'R' },
-      N: { name:'Irvine',  img: FF_IMGS.irvine,  badge:'N' },
-      P: { name:'SeeD',    img: null,            badge:'P' },
+      K: { name:'Squall Leonhart',    img: FF_IMGS.squall,  badge:'K', faceKey:'squall'  },
+      Q: { name:'Rinoa Heartilly',    img: FF_IMGS.rinoa,   badge:'Q', faceKey:'rinoa'   },
+      B: { name:'Quistis Trepe',      img: FF_IMGS.quistis, badge:'B', faceKey:'quistis' },
+      R: { name:'Zell Dincht',        img: FF_IMGS.zell,    badge:'R', faceKey:'zell'    },
+      N: { name:'Irvine Kinneas',     img: FF_IMGS.irvine,  badge:'N', faceKey:'irvine'  },
+      P: { name:'SeeD Cadet',         img: null,            badge:'P', faceKey:null      },
     },
     label: { white: 'FF7 (Cloud)', black: 'FF8 (Squall)' },
   },
@@ -134,14 +148,26 @@ function knightSVG(color) {
   `, color);
 }
 
-// Pawn — soldier
+// Pawn — white=SOLDIER helmet, black=SeeD uniform
 function pawnSVG(color) {
-  return svgWrap(`
-    <circle cx="50" cy="28" r="14"/>
-    <path d="M38,42 Q33,55 35,65 L65,65 Q67,55 62,42 Z"/>
-    <rect x="30" y="65" width="40" height="12" rx="4"/>
-    <line x1="50" y1="42" x2="50" y2="65" stroke-width="1.5"/>
-  `, color);
+  if (color === 'white') {
+    // SOLDIER — angular helmet (FF7 aesthetic)
+    return svgWrap(`
+      <polygon points="50,10 35,20 32,38 40,42 60,42 68,38 65,20" />
+      <rect x="38" y="28" width="24" height="8" rx="2" fill-opacity="0.4"/>
+      <path d="M38,42 Q32,56 34,66 L66,66 Q68,56 62,42 Z"/>
+      <rect x="29" y="66" width="42" height="12" rx="4"/>
+    `, color);
+  } else {
+    // SeeD — round helmet with visor (FF8 aesthetic)
+    return svgWrap(`
+      <circle cx="50" cy="26" r="16"/>
+      <rect x="36" y="24" width="28" height="8" rx="3" fill-opacity="0.35"/>
+      <path d="M37,42 Q31,56 33,66 L67,66 Q69,56 63,42 Z"/>
+      <rect x="28" y="66" width="44" height="12" rx="4"/>
+      <line x1="36" y1="16" x2="64" y2="16" stroke-width="2.5" stroke-linecap="round"/>
+    `, color);
+  }
 }
 
 // ─── Piece SVG Dispatcher ────────────────────────────────────────────────────
@@ -164,18 +190,26 @@ function renderPieceEl(type, color, theme) {
   if (theme === 'ff' && themeData.img) {
     const wrap = document.createElement('div');
     wrap.className = `piece-photo-wrap ${color}`;
+    wrap.dataset.name = themeData.name;  // for tooltip
+
     const img = document.createElement('img');
     img.src = themeData.img;
     img.alt = themeData.name;
     img.draggable = false;
-    // fallback to SVG if image fails
+    // Per-character face crop
+    if (themeData.faceKey && FACE_POS[themeData.faceKey]) {
+      img.style.objectPosition = FACE_POS[themeData.faceKey];
+    }
+    // Fallback to SVG if image fails to load
     img.onerror = () => {
       wrap.className = 'piece';
       wrap.innerHTML = getPieceSVG(type, color);
     };
+
     const badge = document.createElement('span');
     badge.className = 'piece-type-badge';
     badge.textContent = themeData.badge;
+
     wrap.appendChild(img);
     wrap.appendChild(badge);
     return wrap;
