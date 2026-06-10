@@ -269,22 +269,108 @@ h1 {
 }
 .piece.capturing { animation: captureFlash 0.3s forwards; }
 
+/* ── Capture animation ── */
+@keyframes captureFlash {
+  0%   { opacity: 1; transform: scale(1); }
+  40%  { opacity: 0.2; transform: scale(1.4) rotate(15deg); filter: brightness(2); }
+  100% { opacity: 0; transform: scale(0) rotate(30deg); }
+}
+.capturing { animation: captureFlash 0.35s ease-out forwards !important; }
+
+/* ── Piece move animation ── */
+@keyframes pieceAppear {
+  from { transform: scale(0.6); opacity: 0.4; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+.piece-enter { animation: pieceAppear 0.2s ease-out; }
+
+/* ── Check pulse ── */
+@keyframes checkPulse {
+  0%, 100% { background: rgba(255,60,60,0.5); }
+  50%       { background: rgba(255,60,60,0.85); }
+}
+.sq.in-check { animation: checkPulse 0.7s ease-in-out infinite !important; }
+
 /* ── Controls ── */
 .controls { display: flex; gap: 10px; margin-top: 16px; }
 .ctrl-btn {
   font-family: 'Cinzel', serif; font-size: 0.8rem;
-  padding: 8px 20px;
+  padding: 8px 22px;
   background: rgba(0,0,0,0.5); border: 2px solid #f5d87a55;
-  color: #f5d87a; border-radius: 6px; cursor: pointer;
-  letter-spacing: 1px; transition: all 0.2s;
+  color: #f5d87a; border-radius: 8px; cursor: pointer;
+  letter-spacing: 1px; transition: all 0.25s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
 }
-.ctrl-btn:hover { background: #f5d87a22; border-color: #f5d87a; }
+.ctrl-btn:hover {
+  background: #f5d87a22; border-color: #f5d87a;
+  box-shadow: 0 0 14px #f5d87a44;
+  transform: translateY(-1px);
+}
+.ctrl-btn:active { transform: translateY(0); }
 
-.move-log {
-  margin-top: 12px; font-size: 0.65rem;
-  color: #aad4aa88; letter-spacing: 1px;
-  max-width: var(--board-size); text-align: center; min-height: 18px;
+/* ── Captured pieces bar ── */
+.captured-bar {
+  display: flex; gap: 16px; margin-top: 10px;
+  max-width: var(--board-size); justify-content: center;
+  flex-wrap: wrap;
 }
+.captured-side {
+  display: flex; align-items: center; gap: 4px;
+  font-family: 'Cinzel', serif; font-size: 0.6rem;
+}
+.captured-side .cap-label {
+  color: #f5d87a88; letter-spacing: 1px; margin-right: 4px;
+}
+.cap-icon { font-size: 13px; line-height: 1; }
+
+/* ── Move log ── */
+.move-log {
+  margin-top: 10px; font-size: 0.65rem;
+  color: #aad4aa88; letter-spacing: 1px;
+  max-width: var(--board-size); text-align: center; min-height: 20px;
+  background: rgba(0,0,0,0.2); border-radius: 6px;
+  padding: 4px 12px;
+}
+
+/* ── Game Over overlay ── */
+.gameover-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.82); z-index: 200;
+  align-items: center; justify-content: center;
+  flex-direction: column;
+}
+.gameover-overlay.show { display: flex; }
+@keyframes gameoverAppear {
+  from { transform: scale(0.7); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+.gameover-box {
+  background: linear-gradient(145deg, #1a2e1a, #0d1a0d);
+  border: 2px solid #f5d87a;
+  border-radius: 16px; padding: 36px 48px;
+  text-align: center; font-family: 'Cinzel', serif;
+  box-shadow: 0 0 60px #f5d87a44;
+  animation: gameoverAppear 0.4s ease-out;
+}
+.gameover-title {
+  font-size: clamp(1.2rem, 4vw, 2rem);
+  color: #f5d87a;
+  text-shadow: 0 0 20px #f5d87aaa;
+  margin-bottom: 8px;
+  font-family: 'Cinzel Decorative', serif;
+}
+.gameover-sub {
+  font-size: 0.85rem; color: #aad4aa;
+  letter-spacing: 2px; margin-bottom: 24px;
+}
+.gameover-btn {
+  font-family: 'Cinzel', serif; font-size: 0.9rem;
+  padding: 10px 32px;
+  background: #f5d87a22; border: 2px solid #f5d87a;
+  color: #f5d87a; border-radius: 8px; cursor: pointer;
+  letter-spacing: 2px; transition: all 0.2s;
+}
+.gameover-btn:hover { background: #f5d87a44; box-shadow: 0 0 20px #f5d87a55; }
 
 /* ── Legend ── */
 .legend {

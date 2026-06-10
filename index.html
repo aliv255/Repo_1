@@ -35,8 +35,17 @@
     <button class="ctrl-btn" onclick="newGame()">🔄 New Game</button>
     <button class="ctrl-btn" onclick="undoMove()">↩ Undo</button>
   </div>
+  <div class="captured-bar" id="capturedBar"></div>
   <div class="move-log" id="moveLog"></div>
   <div class="legend" id="legend"></div>
+
+  <div class="gameover-overlay" id="gameoverOverlay">
+    <div class="gameover-box">
+      <div class="gameover-title" id="gameoverTitle">♚ CHECKMATE</div>
+      <div class="gameover-sub" id="gameoverSub">Player menang!</div>
+      <button class="gameover-btn" onclick="newGame()">⚔ Play Again ⚔</button>
+    </div>
+  </div>
 
   <div class="modal-overlay" id="promoModal">
     <div class="modal">

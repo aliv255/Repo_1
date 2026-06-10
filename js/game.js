@@ -12,6 +12,7 @@ let enPassantTarget = null; // {r, c} square where ep capture lands
 let castlingRights = { white: { K: true, Q: true }, black: { K: true, Q: true } };
 let gameOver = false;
 let currentTheme = 'ff';
+let captured = { white: [], black: [] }; // pieces captured BY each color
 
 // ─── Board Init ──────────────────────────────────────────────────────────────
 const INIT_BACK = ['R','N','B','Q','K','B','N','R'];
@@ -36,10 +37,13 @@ function newGame() {
   castlingRights = { white: { K: true, Q: true }, black: { K: true, Q: true } };
   gameOver = false;
   moveLogEntries = [];
+  captured = { white: [], black: [] };
 
+  document.getElementById('gameoverOverlay').classList.remove('show');
   renderBoard();
   updateStatus();
   renderMoveLog();
+  renderCaptured();
 }
 
 // ─── Render Board ─────────────────────────────────────────────────────────────
@@ -83,7 +87,12 @@ function renderBoard() {
       // Piece
       const piece = board[r][c];
       if (piece) {
-        sq.appendChild(renderPieceEl(piece.type, piece.color, currentTheme));
+        const el = renderPieceEl(piece.type, piece.color, currentTheme);
+        // Animate piece on destination square of last move
+        if (lastMove && r === lastMove.to.r && c === lastMove.to.c) {
+          el.classList.add('piece-enter');
+        }
+        sq.appendChild(el);
       }
 
       sq.addEventListener('click', () => handleClick(r, c));
@@ -133,10 +142,16 @@ function executeMove(fr, fc, tr, tc, special) {
     turn, enPassantTarget: enPassantTarget ? {...enPassantTarget} : null,
     castlingRights: JSON.parse(JSON.stringify(castlingRights)),
     lastMove: lastMove ? JSON.parse(JSON.stringify(lastMove)) : null,
+    captured: { white: [...captured.white], black: [...captured.black] },
   });
 
   const piece = board[fr][fc];
-  const wasCapture = !!(board[tr][tc]) || special === 'ep';
+  const capturedPiece = board[tr][tc];
+  const wasCapture = !!capturedPiece || special === 'ep';
+
+  // Track captured piece
+  if (capturedPiece) captured[piece.color].push(capturedPiece.type);
+  if (special === 'ep') captured[piece.color].push('P');
 
   // En passant capture
   if (special === 'ep') {
@@ -217,8 +232,17 @@ function finishTurn(fr, fc, tr, tc, piece, wasCapture) {
     else moveLogEntries.push({ white: '…', black: notation });
   }
   renderMoveLog();
+  renderCaptured();
   renderBoard();
   updateStatus();
+}
+
+function showGameOver(title, sub) {
+  const ov = document.getElementById('gameoverOverlay');
+  if (!ov) return;
+  document.getElementById('gameoverTitle').textContent = title;
+  document.getElementById('gameoverSub').textContent = sub;
+  ov.classList.add('show');
 }
 
 function renderMoveLog() {
@@ -269,12 +293,14 @@ function updateStatus() {
     bar.textContent = `♚ CHECKMATE — ${winner} Menang!`;
     bar.className = 'status-bar checkmate';
     gameOver = true;
+    setTimeout(() => showGameOver('♚ CHECKMATE', `${winner} Menang!`), 600);
     return;
   }
   if (isStalemate(turn)) {
     bar.textContent = '🤝 Stalemate — Seri!';
     bar.className = 'status-bar checkmate';
     gameOver = true;
+    setTimeout(() => showGameOver('🤝 STALEMATE', 'Pertandingan seri!'), 600);
     return;
   }
 
@@ -298,6 +324,7 @@ function undoMove() {
   enPassantTarget = prev.enPassantTarget;
   castlingRights = prev.castlingRights;
   lastMove = prev.lastMove;
+  captured = prev.captured;
   gameOver = false;
   selected = null;
   validMoves = [];
@@ -310,6 +337,23 @@ function undoMove() {
   renderBoard();
   updateStatus();
   renderMoveLog();
+  renderCaptured();
+}
+
+// ─── Captured Pieces Display ──────────────────────────────────────────────────
+const PIECE_ICONS = { K:'♚', Q:'♛', R:'♜', B:'♝', N:'♞', P:'♟' };
+function renderCaptured() {
+  const bar = document.getElementById('capturedBar');
+  if (!bar) return;
+  const wCaps = captured.white.map(t => `<span class="cap-icon">${PIECE_ICONS[t]||'?'}</span>`).join('');
+  const bCaps = captured.black.map(t => `<span class="cap-icon">${PIECE_ICONS[t]||'?'}</span>`).join('');
+  bar.innerHTML = `
+    <div class="captured-side" style="color:#f5d87a">
+      <span class="cap-label">FF7 took:</span>${wCaps || '—'}
+    </div>
+    <div class="captured-side" style="color:#bb66ff">
+      <span class="cap-label">FF8 took:</span>${bCaps || '—'}
+    </div>`;
 }
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
